@@ -7,8 +7,8 @@ neural network.
 """
 
 #Libraries
-import mnist #for loading MNIST database
-import digit_classifier as net #for getting the results of the digit classifier
+import mnist_loader2 as mnist #for loading MNIST database
+import digit_classifier_nn as net #for getting the results of the digit classifier
 import matplotlib.pyplot as plt #for displaying results
 import numpy as np #for arrays
 

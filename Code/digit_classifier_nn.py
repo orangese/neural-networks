@@ -75,7 +75,7 @@ Progress:
 """
 
 #Libraries
-import mnist #for loading the MNIST data (not a standard library)
+import mnist_loader2 as mnist #for loading the MNIST data (not a standard library)
 import numpy as np #for fast matrix-based computations
 
 #Classes
@@ -508,7 +508,8 @@ class Network(object):
 def main(structure, learning_rate, minibatch_size, num_epochs,
          cost_function = Cost("mse"),
          body_activation = Activation("sigmoid"),
-         output_activation = Activation("sigmoid"), monitor = False):
+         output_activation = Activation("sigmoid"), monitor = False,
+         write = False):
   data = mnist.load_data()
 
   digit_classifier = Network(structure, cost_function = cost_function,
@@ -531,9 +532,16 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
                                   data["validation"], test_data = data["test"],
                                   monitor = monitor)
 
+  if write:
+    with open("digit_classifier_network.txt", "w") as filestream:
+      filestream.write("weights: " + str(digit_classifier.weights) + "\nbiases: "+
+                 str(digit_classifier.biases))
+
   return digit_classifier
 
 #Testing area
 if __name__ == "__main__":
-  main([784, 30, 10], 0.5, 10, 30, cost_function = Cost("cross-entropy"),
-       monitor = False)
+  main([784, 30, 10], 0.5, 10, 30, cost_function = Cost("log-likelihood",
+                                                        regularization = "L2",
+                                                        reg_parameter = 5.0),
+       output_activation = Activation("softmax"), monitor = False, write = True)
