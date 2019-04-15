@@ -11,6 +11,7 @@ function usually called by our neural network code.
 # Standard library
 import _pickle as cPickle
 import gzip
+from timeit import default_timer as timer #for timing stuff
 
 # Third-party libraries
 import numpy as np
@@ -79,3 +80,10 @@ def vectorized_result(j):
     e = np.zeros((10, 1))
     e[j] = 1.0
     return e
+
+if __name__ == "__main__":
+    start = timer()
+    data = load_data()
+    end = timer()
+    print (end - start)
+    print (data["train"][0][0].dtype) #--> float32

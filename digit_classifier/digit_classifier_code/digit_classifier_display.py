@@ -7,46 +7,31 @@ neural network.
 """
 
 #Libraries
-import mnist_loader2 as mnist #for loading MNIST database
 import digit_classifier_nn as net #for getting the results of the digit classifier
 import matplotlib.pyplot as plt #for displaying results
 import numpy as np #for arrays
 
-data = mnist.load_data()
-
 structure = [784, 100, 10]
-cost_function = net.Cost("cross-entropy", regularization = "L2",
+cost_function = net.Cost("log-likelihood", regularization = "L2",
                          reg_parameter = 5.0)
-digit_classifier = net.Network(structure,
-                               cost_function = cost_function)
-
+body_activation = net.Activation("sigmoid")
+output_activation = net.Activation("softmax")
 num_epochs = 60
 learning_rate = 0.31
 minibatch_size = 10
 monitor = True
-early_stopping = "aGL"
-stop_parameter = 0.0
-aGL_parameter = 100
+early_stopping = None
+stop_parameter = None
+aGL_parameter = None
 
-print ("Evaluation without training: {0}%".format(
-    digit_classifier.evaluate_accuracy(data["test"])))
-  
-print ("""Learning rate: {0}\nMinibatch size: {1}\
-      \nNumber of epochs: {2}\nStructure: {3}\nCost function: {4}\nBody activation function: {5}\nOutput activation function: {6}"""
-       .format(learning_rate, minibatch_size, num_epochs,
-        digit_classifier.layers, digit_classifier.cost.name,
-        digit_classifier.activation.name,
-        digit_classifier.output_activation.name))
-print ("Training in process...")
-
-evaluation = digit_classifier.SGD(data["train"], num_epochs,
-                                  learning_rate, minibatch_size,
-                                  validation_data = data["validation"],
-                                  test_data = data["test"],
-                                  monitor = monitor,
-                                  early_stopping = early_stopping,
-                                  stop_parameter = stop_parameter,
-                                  aGL_parameter = aGL_parameter)
+digit_classifier, evaluation = net.main(structure, learning_rate, minibatch_size,
+                                        num_epochs, cost_function = cost_function,
+                                        body_activation = body_activation,
+                                        output_activation = output_activation,
+                                        monitor = True, write = False,
+                                        early_stopping = early_stopping,
+                                        stop_parameter = stop_parameter,
+                                        aGL_parameter = stop_parameter)
 
 actual = len(evaluation["validation accuracy"])
 offset = 0

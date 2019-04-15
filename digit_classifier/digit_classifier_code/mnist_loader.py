@@ -56,8 +56,8 @@ Pixels are organized row-wise. Pixel values are 0 to 255.
 0 means background (white), 255 means foreground (black). 
 
 Remember, the images are 28 x 28 pixels, with each pixel being represented
-by a number between 0 and 255. There are 70000 images in total,with 60000
-being the training data and 10000 being the testing data.
+by a number between 0 and 255. There are 70000 images in total, with 60000
+being the training/validation data and 10000 being the testing data.
 
 """
 
@@ -65,23 +65,23 @@ being the training data and 10000 being the testing data.
 import matplotlib.pyplot as plt #for displaying images
 import codecs #for converting from binary to integers
 import numpy as np #parsing the files
-import _pickle as cPickle
-import gzip
+import gzip #for unzipping files
 
 def to_int(b):
   #function that takes in a bytearray and returns an integer
   return int(codecs.encode(b, "hex"), 16)
 
-def normalize(array, range_):
+def normalize(raw_array, range_):
   #function that converts a list of values between any range to [0, 1]
+  array = np.copy(raw_array).astype(np.float32) #raw_array is not writeable
   if range_ == (0, 1):
     return array
   #Step 1: subtract minimum from everything
   array -= range_[0]
   #Step 2: divide by range
-  array = abs(range_[0]) + abs(range_[1])
+  dist = abs(range_[0]) + abs(range_[1])
   array /= dist
-  return value
+  return array
 
 def vectorize(num):
   """function that takes in a number and vectorizes it
@@ -95,7 +95,7 @@ def vectorize(num):
                                                                 [1.]
                                                                 [0.]
                                                                 [0.]]"""
-  result = np.zeros((10, 1), dtype = np.float128)
+  result = np.zeros((10, 1))
   result[num] = 1.0
   return result
 
@@ -126,8 +126,8 @@ def load_file(file, mode):
       in one image"""
       num_columns = to_int(data[12:16])
       """the next four items give the number of columns in one image"""
-      parsed = np.frombuffer(data, dtype = np.uint8, offset = 16).reshape(
-        length, num_rows * num_columns, 1)
+      parsed = normalize(np.frombuffer(data, dtype = np.uint8, offset = 16).
+                         reshape(length, num_rows * num_columns, 1), (0, 255))
       """converting the file from bytearray to reshaped numpy array with
        dimensions (length, num_rows * num_columns, 1) in order to prepare it
        for usage in the digit_classifier program."""
@@ -145,23 +145,22 @@ def load_data():
                            "rb")
   train_labels = load_file("/Users/ryan/Documents/Coding/neural_networks/digit_classifier/digit_classifier_dataset/train-labels-idx1-ubyte.gz",
                            "rb")
-  data["validation"] = np.asarray(list(zip(normalize(train_images[:10000], (0, 255)),
-                                     np.asarray([vectorize(i) for
-                                                 i in train_labels[:10000]]))))
+  data["validation"] = np.asarray(list(zip(train_images[:10000],
+                                       np.asarray(train_labels))))
   """data["validation"] is a set of 10,000 tuples (x, y) containing the
-  28 x 28 image "x" and the corresponding 10-D vectorized label "y".
-  It will be used to help prevent overfitting"""
-  data["train"] = np.asarray(list(zip(normalize(train_images[10000:], (0, 255)),
-                                     np.asarray([vectorize(i) for
-                                                 i in train_labels[10000:]]))))
+  28 x 28 image "x" and the corresponding non-vectorized label "y" """
+  data["train"] = np.asarray(list(zip(train_images[10000:],
+                                  np.asarray([vectorize(i) for
+                                              i in train_labels[10000:]]))))
+  """data["train"] is a set of 50,000 tuples (x, y) containing the
+  28 x 28 image "x" and the corresponding 10-D vectorized label "y" """
   
   test_images = load_file("/Users/ryan/Documents/Coding/neural_networks/digit_classifier/digit_classifier_dataset/t10k-images-idx3-ubyte.gz",
                           "rb")
   test_labels = load_file("/Users/ryan/Documents/Coding/neural_networks/digit_classifier/digit_classifier_dataset/t10k-labels-idx1-ubyte.gz",
                           "rb")
-  data["test"] = np.asarray(list(zip(normalize(test_images, (0, 255)),
-                                     np.asarray([vectorize(i) for
-                                                 i in test_labels]))))
+  data["test"] = np.asarray(list(zip(test_images,
+                                 np.asarray(test_labels))))
 
   return data
 
@@ -183,7 +182,7 @@ def display_image(pixels, label = None):
 if __name__ == "__main__":
   data = load_data()
   epoch = data["train"]
-  np.random.shuffle(epoch) #randomly shuffle epoch
+  #np.random.shuffle(epoch) #randomly shuffle epoch
   minibatches = [epoch[i:i + 16] for i in
                         range(0, len(epoch), 16)]
   for minibatch in minibatches:

@@ -72,10 +72,14 @@ Progress:
   Early stopping: aGL
   Early stopping parameter(s): 100, 0.0
 
+6. 4/15/19: rewrite of the mnist_loader.py program to fix above error (previously,
+  the mnist_loader that was being used in the book, "Neural Networks and
+  Deep Learning")  
+
 """
 
 #Libraries
-import mnist_loader2 as mnist #for loading the MNIST data
+import mnist_loader as mnist #for loading the MNIST data
 import numpy as np #for fast matrix-based computations
 from timeit import default_timer as timer #for timing stuff
 
@@ -286,7 +290,8 @@ class Network(object):
             training_data, is_train = True))
 
       if early_stopping == "GL":
-        to_stop = Early_Stop.GL(evaluation["validation accuracy"], stop_parameter)
+        to_stop = Early_Stop.GL(evaluation["validation accuracy"],
+                                stop_parameter)
         if to_stop == "stop":
           print ("End SGD: stop parameter exceeded")
           self.biases = stored_biases
@@ -307,7 +312,7 @@ class Network(object):
           stored_biases = self.biases
           stored_weights = self.weights 
 
-    if test_data:
+    if not (test_data is None):
       print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
       
     if monitor or early_stopping != None:
@@ -403,12 +408,12 @@ class Network(object):
         if early_stopping or monitor:
           evaluation["validation accuracy"].append(validation_evaluate)
           evaluation["train accuracy"].append(self.evaluate_accuracy(
-            training_data, is_train = True))
+            training_data))
         if monitor:
           evaluation["validation cost"].append(self.evaluate_cost(
             validation_data))
           evaluation["train cost"].append(self.evaluate_cost(
-            training_data, is_train = True))
+            training_data))
 
       if early_stopping == "GL":
         to_stop = Early_Stop.GL(evaluation["validation accuracy"], stop_parameter)
@@ -432,7 +437,7 @@ class Network(object):
           stored_biases = self.biases
           stored_weights = self.weights 
 
-    if test_data:
+    if test_data != None:
       print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
       
     return evaluation
@@ -488,7 +493,7 @@ class Network(object):
   def evaluate_accuracy(self, test_data, is_train = False):
     #returns number correct when the network is evaluated using test data
     test_results = [(np.argmax(self.feed_forward(image)), label)
-                        for (image, label) in test_data]
+                    for (image, label) in test_data]
     if is_train:
       return round((sum(int(image == np.argmax(label)) for (image, label) in
                  test_results) / len(test_data) * 100.0), 2)
@@ -503,15 +508,15 @@ class Network(object):
                                   for (image, label) in test_data])
     else:
       return self.cost.calculate([(self.feed_forward(
-        image), mnist.vectorized_result(label)) for (image, label) in test_data])
-
+        image), mnist.vectorize(label)) for (image, label) in test_data])
 
 #Main
 def main(structure, learning_rate, minibatch_size, num_epochs,
          cost_function = Cost("mse"),
          body_activation = Activation("sigmoid"),
          output_activation = Activation("sigmoid"), monitor = False,
-         write = False):
+         write = False, early_stopping = None, stop_parameter = None,
+         aGL_parameter = None):
 
   start = timer()
   data = mnist.load_data()
@@ -526,19 +531,23 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
   print ("Learning rate: {0}\nMinibatch size: {1}\
         \nNumber of epochs: {2}\nStructure: {3}\nCost function: {4}\
         \nRegularization: {5}\nRegularization parameter: {6}\
-        \nBody activation function: {7}\nOutput activation function: {8}"
+        \nBody activation function: {7}\nOutput activation function: {8}\
+        \nEarly stopping: {9}\nStop parameter: {10}\naGL parameter: {11}"
          .format(learning_rate, minibatch_size, num_epochs,
                  digit_classifier.layers, digit_classifier.cost.name,
                  digit_classifier.cost.regularization,
                  digit_classifier.cost.reg_parameter,
                  digit_classifier.activation.name,
-                 digit_classifier.output_activation.name))
+                 digit_classifier.output_activation.name, early_stopping,
+                 stop_parameter, aGL_parameter))
   print ("Training in process...")
   
-  accuracy = digit_classifier.SGD(data["train"], num_epochs, learning_rate,
-                                  minibatch_size, validation_data =
-                                  data["validation"], test_data = data["test"],
-                                  monitor = monitor)
+  evaluation = digit_classifier.SGD(data["train"], num_epochs, learning_rate,
+                                    minibatch_size, validation_data =
+                                    data["validation"], test_data = data["test"],
+                                    monitor = monitor, early_stopping = early_stopping,
+                                    stop_parameter = stop_parameter,
+                                    aGL_parameter = aGL_parameter)
 
   if write:
     with open("digit_classifier_network.txt", "w") as filestream:
@@ -549,11 +558,11 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
 
   print ("Time elapsed:", end - start, "seconds")
   
-  return digit_classifier
+  return (digit_classifier, evaluation)
 
 #Testing area
 if __name__ == "__main__":
-  main([784, 30, 10], 0.5, 10, 2, cost_function = Cost("log-likelihood",
+  main([784, 100, 10], 0.5, 10, 2, cost_function = Cost("log-likelihood",
                                                         regularization = "L2",
                                                         reg_parameter = 5.0),
        output_activation = Activation("softmax"), monitor = False, write = True)
