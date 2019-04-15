@@ -1,6 +1,8 @@
 """
 
-This is a program to load the MNIST dataset as numpy arrays. You can download
+"mnist_loader.py"
+
+A program to load the MNIST dataset as numpy arrays. You can download
 the datasets at "http://yann.lecun.com/exdb/mnist/".
 
 The format for the MNIST datasets are as follows:

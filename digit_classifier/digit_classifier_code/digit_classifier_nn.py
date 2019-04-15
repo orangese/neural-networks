@@ -1,6 +1,8 @@
 """
 
-"digit_classifier.py" is a digit classifying neural network.
+"digit_classifier.py"
+
+A digit classifying neural network.
 
 Type: vanilla neural network (MLP feedforward)
 Activation function(s): sigmoid, softmax
@@ -213,13 +215,21 @@ class Network(object):
       (makes the indexing easier), and one array of arrays
       for each layer, except the first layer (which has no biases)."""
     self.weights = np.array([np.random.randn(layers[layer + 1], layers[layer])
-                    for layer in range(len(layers) - 1)])
+                             / np.sqrt(layers[layer])
+                             for layer in range(len(layers) - 1)])
+    self.weight_init = "regular initialization"
     """generates a random list of weights-- each layer l has an
     array of n arrays of length m, where m is the
     size of the layer l - 1 and n is the size of layer l."""
     self.cost = cost_function
     self.activation = body_activation
     self.output_activation = output_activation
+
+  def large_weight_initializer(self):
+    self.weights = np.array([np.random.randn(self.layers[layer + 1],
+                                             self.layers[layer])
+                             for layer in range(len(self.layers) - 1)])
+    self.weight_init = "large initialization"
 
   def feed_forward(self, a):
     #feeds an input into the network and returns its output
@@ -514,33 +524,39 @@ class Network(object):
 def main(structure, learning_rate, minibatch_size, num_epochs,
          cost_function = Cost("mse"),
          body_activation = Activation("sigmoid"),
-         output_activation = Activation("sigmoid"), monitor = False,
+         output_activation = Activation("sigmoid"),
+         large_weight_initialization = False, monitor = False,
          write = False, early_stopping = None, stop_parameter = None,
-         aGL_parameter = None):
-
+         aGL_parameter = None, show = True):
   start = timer()
   data = mnist.load_data()
 
   digit_classifier = Network(structure, cost_function = cost_function,
                              body_activation = body_activation,
                              output_activation = output_activation)
+
+  if large_weight_initialization:
+    digit_classifier.large_weight_initializer()
+
+  if show:
+    print ("Evaluation without training: {0}%".format(
+      digit_classifier.evaluate_accuracy(data["test"])))
     
-  print ("Evaluation without training: {0}%".format(
-    digit_classifier.evaluate_accuracy(data["test"])))
-  
-  print ("Learning rate: {0}\nMinibatch size: {1}\
-        \nNumber of epochs: {2}\nStructure: {3}\nCost function: {4}\
-        \nRegularization: {5}\nRegularization parameter: {6}\
-        \nBody activation function: {7}\nOutput activation function: {8}\
-        \nEarly stopping: {9}\nStop parameter: {10}\naGL parameter: {11}"
-         .format(learning_rate, minibatch_size, num_epochs,
-                 digit_classifier.layers, digit_classifier.cost.name,
-                 digit_classifier.cost.regularization,
-                 digit_classifier.cost.reg_parameter,
-                 digit_classifier.activation.name,
-                 digit_classifier.output_activation.name, early_stopping,
-                 stop_parameter, aGL_parameter))
-  print ("Training in process...")
+    print ("Learning rate: {0}\nMinibatch size: {1}\
+          \nNumber of epochs: {2}\nStructure: {3}\nCost function: {4}\
+          \nRegularization: {5}\nRegularization parameter: {6}\
+          \nBody activation function: {7}\nOutput activation function: {8}\
+          \nWeight initialization: {9}\nEarly stopping: {10}\nStop parameter: {11}\
+          \naGL parameter: {12}"
+           .format(learning_rate, minibatch_size, num_epochs,
+                   digit_classifier.layers, digit_classifier.cost.name,
+                   digit_classifier.cost.regularization,
+                   digit_classifier.cost.reg_parameter,
+                   digit_classifier.activation.name,
+                   digit_classifier.output_activation.name,
+                   digit_classifier.weight_init, early_stopping,
+                   stop_parameter, aGL_parameter))
+    print ("Training in process...")
   
   evaluation = digit_classifier.SGD(data["train"], num_epochs, learning_rate,
                                     minibatch_size, validation_data =
@@ -556,7 +572,8 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
 
   end = timer()
 
-  print ("Time elapsed:", end - start, "seconds")
+  if show:
+    print ("Time elapsed:", end - start, "seconds")
   
   return (digit_classifier, evaluation)
 
