@@ -71,12 +71,13 @@ Progress:
   Regularization parameter: 0.5
   Early stopping: aGL
   Early stopping parameter(s): 100, 0.0
-    
+
 """
 
 #Libraries
-import mnist_loader2 as mnist #for loading the MNIST data (not a standard library)
+import mnist_loader2 as mnist #for loading the MNIST data
 import numpy as np #for fast matrix-based computations
+from timeit import default_timer as timer #for timing stuff
 
 #Classes
 class Cost(object):
@@ -309,7 +310,8 @@ class Network(object):
     if test_data:
       print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
       
-    return evaluation
+    if monitor or early_stopping != None:
+      return evaluation
 
   def backprop(self, image, label):
     weighted_inputs = []
@@ -510,6 +512,8 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
          body_activation = Activation("sigmoid"),
          output_activation = Activation("sigmoid"), monitor = False,
          write = False):
+
+  start = timer()
   data = mnist.load_data()
 
   digit_classifier = Network(structure, cost_function = cost_function,
@@ -519,12 +523,16 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
   print ("Evaluation without training: {0}%".format(
     digit_classifier.evaluate_accuracy(data["test"])))
   
-  print ("""Learning rate: {0}\nMinibatch size: {1}\
-        \nNumber of epochs: {2}\nStructure: {3}\nCost function: {4}\nBody activation function: {5}\nOutput activation function: {6}"""
+  print ("Learning rate: {0}\nMinibatch size: {1}\
+        \nNumber of epochs: {2}\nStructure: {3}\nCost function: {4}\
+        \nRegularization: {5}\nRegularization parameter: {6}\
+        \nBody activation function: {7}\nOutput activation function: {8}"
          .format(learning_rate, minibatch_size, num_epochs,
-          digit_classifier.layers, digit_classifier.cost.name,
-          digit_classifier.activation.name,
-          digit_classifier.output_activation.name))
+                 digit_classifier.layers, digit_classifier.cost.name,
+                 digit_classifier.cost.regularization,
+                 digit_classifier.cost.reg_parameter,
+                 digit_classifier.activation.name,
+                 digit_classifier.output_activation.name))
   print ("Training in process...")
   
   accuracy = digit_classifier.SGD(data["train"], num_epochs, learning_rate,
@@ -537,11 +545,15 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
       filestream.write("weights: " + str(digit_classifier.weights) + "\nbiases: "+
                  str(digit_classifier.biases))
 
+  end = timer()
+
+  print ("Time elapsed:", end - start, "seconds")
+  
   return digit_classifier
 
 #Testing area
 if __name__ == "__main__":
-  main([784, 30, 10], 0.5, 10, 30, cost_function = Cost("log-likelihood",
+  main([784, 30, 10], 0.5, 10, 2, cost_function = Cost("log-likelihood",
                                                         regularization = "L2",
                                                         reg_parameter = 5.0),
        output_activation = Activation("softmax"), monitor = False, write = True)
