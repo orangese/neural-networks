@@ -110,7 +110,7 @@ class Cost(object):
       return sum(sum(np.nan_to_num(-y * np.log(a) - (1.0 - y) * np.log(1.0 - a)
                  for (a, y) in pairs))) / (len(pairs))
     elif self.name == "log-likelihood":
-      return sum(np.log(np.argmax(a)) for (a, y) in pairs) \
+      return sum(np.log(a[np.argmax(y)]) for (a, y) in pairs) \
              / (-1.0 * len(pairs))
 
   def get_error(self, activation, activations, weighted_inputs, label):
@@ -542,7 +542,7 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
                  stop_parameter, aGL_parameter))
   print ("Training in process...")
   
-  evaluation = digit_classifier.SGD(data["train"], num_epochs, learning_rate,
+  evaluation = digit_classifier.SGD(data["train"][:1000], num_epochs, learning_rate,
                                     minibatch_size, validation_data =
                                     data["validation"], test_data = data["test"],
                                     monitor = monitor, early_stopping = early_stopping,

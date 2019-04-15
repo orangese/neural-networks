@@ -11,12 +11,12 @@ import digit_classifier_nn as net #for getting the results of the digit classifi
 import matplotlib.pyplot as plt #for displaying results
 import numpy as np #for arrays
 
-structure = [784, 100, 10]
+structure = [784, 30, 10]
 cost_function = net.Cost("log-likelihood", regularization = "L2",
                          reg_parameter = 5.0)
 body_activation = net.Activation("sigmoid")
 output_activation = net.Activation("softmax")
-num_epochs = 60
+num_epochs = 2
 learning_rate = 0.31
 minibatch_size = 10
 monitor = True
