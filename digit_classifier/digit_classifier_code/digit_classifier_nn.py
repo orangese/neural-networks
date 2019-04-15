@@ -542,7 +542,7 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
                  stop_parameter, aGL_parameter))
   print ("Training in process...")
   
-  evaluation = digit_classifier.SGD(data["train"][:1000], num_epochs, learning_rate,
+  evaluation = digit_classifier.SGD(data["train"], num_epochs, learning_rate,
                                     minibatch_size, validation_data =
                                     data["validation"], test_data = data["test"],
                                     monitor = monitor, early_stopping = early_stopping,
@@ -562,7 +562,7 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
 
 #Testing area
 if __name__ == "__main__":
-  main([784, 100, 10], 0.5, 10, 2, cost_function = Cost("log-likelihood",
+  main([784, 100, 10], 0.1, 10, 60, cost_function = Cost("log-likelihood",
                                                         regularization = "L2",
                                                         reg_parameter = 5.0),
        output_activation = Activation("softmax"), monitor = False, write = True)
