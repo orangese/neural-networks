@@ -167,18 +167,19 @@ class Early_Stop(object):
     exceeds a parameter. If a new accuracy maximum has been found, this function
     returns "new". Otherwise, the function returns None"""
     local_opt = max(accuracy)
-    accuracy = accuracy[np.argmax(accuracy):]
-    """the above line ensures that GL is only evaluated after the
-    locally optimal point"""
+##    accuracy = accuracy[np.argmax(accuracy):]
+##    """the above line ensures that GL is only evaluated after the
+##    locally optimal point"""
     if len(accuracy) == 0:
       return "new"
     elif len(accuracy) >= n:
+      accuracy = accuracy[:n]
       average_gl = sum([local_opt - accuracy[-i - 1] for i in range(n)]) / \
                  len(accuracy)
       if average_gl > stop_parameter:
         return "stop"
-    if local_opt < accuracy[-1]:
-      return "new"
+      elif local_opt < accuracy[-1]:
+        return "new"
     else:
       return None
 
@@ -297,9 +298,9 @@ class Network(object):
         print ("Epoch {0}: {1}%".format(epoch_num + 1, validation_evaluate))
         if early_stopping or monitor or lr_variation:
           evaluation["validation accuracy"].append(validation_evaluate)
+        if monitor:
           evaluation["train accuracy"].append(self.evaluate_accuracy(
             training_data, is_train = True))
-        if monitor:
           evaluation["validation cost"].append(self.evaluate_cost(
             validation_data))
           evaluation["train cost"].append(self.evaluate_cost(
@@ -328,7 +329,7 @@ class Network(object):
         if lr_variation[0] == "GL":
           change_lr = Early_Stop.GL(evaluation["validation accuracy"],
                                   lr_variation[1])
-        elif lr_variation[0] == "aGL":
+        elif lr_variation[0] == "average_GL":
           change_lr = Early_Stop.average_GL(evaluation["validation accuracy"],
                                           lr_variation[1], lr_variation[2])
         elif lr_variation[0] == "strip_GL":
@@ -343,7 +344,7 @@ class Network(object):
 
         print ("Learning rate:", learning_rate)
 
-    if test_data:
+    if isinstance(test_data, list):
       print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
       
     if monitor or early_stopping:
@@ -468,4 +469,4 @@ if __name__ == "__main__":
                                                         regularization = "L2",
                                                         reg_parameter = 5.0),
        output_activation = Activation("softmax"), monitor = False,
-       lr_variation = ["average_GL", 0.0, 10, 2, 0.002], write = False)
+       lr_variation = ["average_GL", 0.5, 10, 2, 0.002], write = False)
