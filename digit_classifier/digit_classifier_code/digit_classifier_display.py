@@ -25,7 +25,7 @@ minibatch_size = 10
 large_weight_initialization = False
 monitor = True
 early_stopping = ["aGL", 0.0, 50]
-lr_variation = ["strip_GL", 0.0, 10, 2, 0.002]
+lr_variation = ["average_GL", 0.0, 10, 2, 0.002]
 write = False
 #use the above to change SGD stuff-- not in the main methods!
 

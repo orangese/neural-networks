@@ -74,9 +74,9 @@ Progress:
   Early stopping: aGL
   Early stopping parameter(s): 100, 0.0
 
-6. 4/15/19: rewrite of the mnist_loader.py program to fix above error (previously,
-  the mnist_loader that was being used in the book, "Neural Networks and
-  Deep Learning")  
+6. 4/15/19: rewrite of the mnist_loader.py program to fix above error
+  (previously, the mnist_loader used was from the book, "Neural Networks and
+  Deep Learning")
 
 """
 
@@ -192,7 +192,7 @@ class Early_Stop(object):
     if len(accuracy) == 0:
       return "new"
     elif len(accuracy) >= k:
-      strip_gl = [0 if accuracy[-i - 1] > stop_parameter else 1
+      strip_gl = [0 if local_opt - accuracy[-i - 1] > stop_parameter else 1
                   for i in range(k)]
       if not(bool(strip_gl)):
         return "stop"
@@ -468,4 +468,4 @@ if __name__ == "__main__":
                                                         regularization = "L2",
                                                         reg_parameter = 5.0),
        output_activation = Activation("softmax"), monitor = False,
-       lr_variation = ["strip_GL", 0.0, 10, 2, 0.002], write = True)
+       lr_variation = ["average_GL", 0.0, 10, 2, 0.002], write = False)
