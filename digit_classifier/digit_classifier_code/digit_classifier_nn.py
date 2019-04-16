@@ -191,7 +191,7 @@ class Early_Stop(object):
     returns "new". Otherwise, the function returns None"""
     local_opt = max(accuracy)
     accuracy = accuracy[np.argmax(accuracy):]
-    if len(accuracy = 0):
+    if len(accuracy) == 0:
       return "new"
     elif len(accuracy >= k):
       strip_GL = [0 if accuracy[-i - 1] > stop_parameter else 1
