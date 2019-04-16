@@ -193,7 +193,7 @@ class Early_Stop(object):
     accuracy = accuracy[np.argmax(accuracy):]
     if len(accuracy) == 0:
       return "new"
-    elif len(accuracy >= k):
+    elif len(accuracy) >= k:
       strip_GL = [0 if accuracy[-i - 1] > stop_parameter else 1
                   for i in range(k)]
       to_stop = not(bool(strip_GL))
