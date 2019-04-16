@@ -14,19 +14,20 @@ import matplotlib.pyplot as plt #for displaying results
 import numpy as np #for arrays
 
 #Main
-structure = [784, 30, 10]
+structure = [784, 100, 10]
 cost_function = net.Cost("log-likelihood", regularization = "L2",
                          reg_parameter = 5.0)
 body_activation = net.Activation("sigmoid")
 output_activation = net.Activation("softmax")
 num_epochs = 30
-learning_rate = 0.3
+learning_rate = 0.1
 minibatch_size = 10
 large_weight_initialization = False
 monitor = True
 early_stopping = None
 stop_parameter = None
 aGL_parameter = None
+write = False
 #use the above to change SGD stuff-- not in the main methods!
 
 digit_classifier, evaluation = net.main(structure, learning_rate, minibatch_size,
@@ -34,7 +35,7 @@ digit_classifier, evaluation = net.main(structure, learning_rate, minibatch_size
                                         body_activation = body_activation,
                                         output_activation = output_activation,
                                         large_weight_initialization = large_weight_initialization,
-                                        monitor = True, write = False,
+                                        monitor = True, write = write,
                                         early_stopping = early_stopping,
                                         stop_parameter = stop_parameter,
                                         aGL_parameter = stop_parameter)
@@ -64,7 +65,7 @@ def accuracy_and_cost(evaluation, offset):
                 reshape(actual - offset, 1), evaluation["train cost"][offset:],
                 color = "black", label = "Train cost")
   plots[1].set_xlabel("Number of epochs")
-  plots[1].set_ylabel("Cost (cross-entropy)")
+  plots[1].set_ylabel("Cost")
 
   plots[1].grid(True, linestyle = "--")
   plots[1].legend(loc = "best")
