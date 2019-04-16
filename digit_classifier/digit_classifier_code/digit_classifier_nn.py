@@ -8,9 +8,9 @@ Type: vanilla neural network (MLP feedforward)
 Activation function(s): sigmoid, softmax
 Architecture: chosen by user
 Cost function(s): MSE, cross-entropy, log-likelihood
-Training: SGD and vanilla BP
+Training: vanilla SGD and BP
 Early stopping: GL, aGL
-Regularization: 
+Regularization: L1, L2
 Accuracy: 98.02%
 Hyperparameters: chosen by user
 
@@ -154,10 +154,9 @@ class Early_Stop(object):
     the function returns None"""
     local_opt = max(accuracy)
     generalization_loss = local_opt - accuracy[-1]
-    to_stop = True if generalization_loss > stop_parameter else False
     if local_opt < accuracy[-1]:
       return "new"
-    elif to_stop:
+    elif generalization_loss > stop_parameter:
       return "stop"
     else:
       return None
@@ -176,8 +175,7 @@ class Early_Stop(object):
     elif len(accuracy) >= n:
       average_gl = sum([local_opt - accuracy[-i - 1] for i in range(n)]) / \
                  len(accuracy)
-      to_stop = True if average_gl > stop_parameter else False
-      if to_stop:
+      if average_gl > stop_parameter:
         return "stop"
     if local_opt < accuracy[-1]:
       return "new"
@@ -194,10 +192,9 @@ class Early_Stop(object):
     if len(accuracy) == 0:
       return "new"
     elif len(accuracy) >= k:
-      strip_GL = [0 if accuracy[-i - 1] > stop_parameter else 1
+      strip_gl = [0 if accuracy[-i - 1] > stop_parameter else 1
                   for i in range(k)]
-      to_stop = not(bool(strip_GL))
-      if to_stop:
+      if not(bool(strip_gl)):
         return "stop"
     if local_opt < accuracy[-1]:
       return "new"
@@ -240,18 +237,27 @@ class Network(object):
   
   def SGD(self, training_data, num_epochs, learning_rate, minibatch_size,
           validation_data = None, test_data = None, monitor = False,
-          early_stopping = None, stop_parameter = None, aGL_parameter = None):
+          early_stopping = None, lr_variation = None):
     """implements stochastic gradient descent to minimize the cost function.
     This function relies on the self.backprop function to calculate the
     gradient of the cost function, which is necessary for the updating of
     weights and biases"""
     
-    if monitor or early_stopping != None:
+    if monitor or early_stopping or lr_variation:
       evaluation = {"validation accuracy": [], "validation cost": [],
                     "train accuracy": [], "train cost": []}
-    if early_stopping != None:
+    if early_stopping:
       stored_biases = self.biases
       stored_weights = self.weights
+      to_stop = False
+      """format for early_stopping parameter is [GL_type, stop_parameter,
+      aGL_strip_GL_parameter]"""
+
+    if lr_variation:
+      original_lr = learning_rate
+      change_lr = False
+      """format for lr_variation parameter is [GL_type, stop_parameter,
+      aGL_strip_GL_parameter, lr_variation_parameter, lr_variation_cutoff]"""
     
     for epoch_num in range(num_epochs):
       epoch = training_data
@@ -289,7 +295,7 @@ class Network(object):
       else:
         validation_evaluate = self.evaluate_accuracy(validation_data)
         print ("Epoch {0}: {1}%".format(epoch_num + 1, validation_evaluate))
-        if early_stopping or monitor:
+        if early_stopping or monitor or lr_variation:
           evaluation["validation accuracy"].append(validation_evaluate)
           evaluation["train accuracy"].append(self.evaluate_accuracy(
             training_data, is_train = True))
@@ -299,9 +305,16 @@ class Network(object):
           evaluation["train cost"].append(self.evaluate_cost(
             training_data, is_train = True))
 
-      if early_stopping == "GL":
-        to_stop = Early_Stop.GL(evaluation["validation accuracy"],
-                                stop_parameter)
+      if early_stopping:
+        if early_stopping[0] == "GL":
+          to_stop = Early_Stop.GL(evaluation["validation accuracy"],
+                                  early_stopping[1])
+        elif early_stopping[0] == "aGL":
+          to_stop = Early_Stop.average_GL(evaluation["validation accuracy"],
+                                          early_stopping[1], early_stopping[2])
+        elif early_stopping[0] == "strip_GL":
+          to_stop = Early_Stop.strip_GL(evaluation["validation accuracy"],
+                                        early_stopping[1], early_stopping[2])
         if to_stop == "stop":
           print ("End SGD: stop parameter exceeded")
           self.biases = stored_biases
@@ -310,22 +323,30 @@ class Network(object):
         elif to_stop == "new":
           stored_biases = self.biases
           stored_weights = self.weights
-      elif early_stopping == "aGL":
-        to_stop = Early_Stop.average_GL(evaluation["validation accuracy"],
-                                        stop_parameter, aGL_parameter)
-        if to_stop == "stop":
-          print ("End SGD: stop parameter exceeded")
-          self.biases = stored_biases
-          self.weights = stored_weights
-          break
-        elif to_stop == "new":
-          stored_biases = self.biases
-          stored_weights = self.weights 
 
-    if not (test_data is None):
+      if lr_variation:
+        if lr_variation[0] == "GL":
+          change_lr = Early_Stop.GL(evaluation["validation accuracy"],
+                                  lr_variation[1])
+        elif lr_variation[0] == "aGL":
+          change_lr = Early_Stop.average_GL(evaluation["validation accuracy"],
+                                          lr_variation[1], lr_variation[2])
+        elif lr_variation[0] == "strip_GL":
+          change_lr = Early_Stop.strip_GL(evaluation["validation accuracy"],
+                                        lr_variation[1], lr_variation[2])
+
+        if change_lr == "stop":
+          learning_rate /= lr_variation[3]
+        if original_lr * lr_variation[4] >= learning_rate:
+          print ("End SGD: learning rate parameter exceeded")
+          break
+
+        print ("Learning rate:", learning_rate)
+
+    if test_data:
       print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
       
-    if monitor or early_stopping != None:
+    if monitor or early_stopping:
       return evaluation
 
   def backprop(self, image, label):
@@ -347,146 +368,12 @@ class Network(object):
     if self.output_activation.name != self.activation.name:
       #If the output layer different from the other layers:
       activations[-1] = self.output_activation.calculate(weighted_inputs[-1])
-
-    #print (np.array(activations).shape) --> (3,)
-    #print (activations[-1].shape) --> (10, 1)
-    #print (activations[-2].shape) --> (30, 1)
     
     #Step 2: computing the output error
     error = self.cost.get_error(self.output_activation, activations[-1],
                                 weighted_inputs[-1], label)
     nabla_b[-1] = error
     nabla_w[-1] = np.outer(error, activations[-2])
-    #print (np.array(nabla_w[-1]).shape)# --> (10, 30)
-    #print (np.array(nabla_b[-1]).shape) --> (10, 1)
-
-    #Step 3: computing the errors for the rest of the layers
-    l = len(self.layers) - 2
-    while l > 0:
-      error = np.dot(self.weights[l].T, error) * \
-             self.activation.derivative(weighted_inputs[l - 1])
-      #computing the error for layer "l + 1" (index "l")
-      nabla_b[l - 1] = error
-      nabla_w[l - 1] = np.outer(error, activations[l - 1])
-      l -= 1
-
-    return (nabla_b, nabla_w) #returns the gradient of the cost function
-
-  def SGD2(self, training_data, num_epochs, learning_rate, minibatch_size,
-          validation_data = None, test_data = None, monitor = False,
-          early_stopping = None, stop_parameter = None, aGL_parameter = None):
-    """implements stochastic gradient descent to minimize the cost function.
-    This function relies on the self.backprop function to calculate the
-    gradient of the cost function, which is necessary for the updating of
-    weights and biases"""
-    
-    if monitor or early_stopping != None:
-      evaluation = {"validation accuracy": [], "validation cost": [],
-                    "train accuracy": [], "train cost": []}
-    if early_stopping != None:
-      stored_biases = self.biases
-      stored_weights = self.weights
-    
-    for epoch_num in range(num_epochs):
-      epoch = training_data
-      np.random.shuffle(epoch) #randomly shuffle epoch
-      minibatches = [epoch[i:i + minibatch_size] for i in
-                      range(0, len(epoch), minibatch_size)]
-      """divide epoch into minibatches (the size of the minibatches is a
-      hyperparameter, or a parameter not chosen by the program)"""
-      
-      for minibatch in minibatches:
-        nabla_b, nabla_w = self.backprop2(minibatch)
-        """most of the work is done by the above line, which calculates
-        the gradient of the cost function with respect to the weights
-        and biases"""
-        if self.cost.regularization == "L1":
-          nabla_w = nabla_w + (self.cost.reg_parameter / len(epoch)
-                                           * np.sign(self.weights))
-        elif self.cost.regularization == "L2":
-          nabla_w = nabla_w + (self.cost.reg_parameter / len(epoch) 
-                                           * self.weights)
-          
-        self.biases -= (learning_rate / minibatch_size) * nabla_b
-        self.weights -= (learning_rate / minibatch_size) * nabla_w
-      
-      if test_data is None:
-        print ("Epoch {0} completed".format(epoch_num + 1))
-      else:
-        validation_evaluate = self.evaluate_accuracy(validation_data)
-        print ("Epoch {0}: {1}%".format(epoch_num + 1, validation_evaluate))
-        if early_stopping or monitor:
-          evaluation["validation accuracy"].append(validation_evaluate)
-          evaluation["train accuracy"].append(self.evaluate_accuracy(
-            training_data))
-        if monitor:
-          evaluation["validation cost"].append(self.evaluate_cost(
-            validation_data))
-          evaluation["train cost"].append(self.evaluate_cost(
-            training_data))
-
-      if early_stopping == "GL":
-        to_stop = Early_Stop.GL(evaluation["validation accuracy"], stop_parameter)
-        if to_stop == "stop":
-          print ("End SGD: stop parameter exceeded")
-          self.biases = stored_biases
-          self.weights = stored_weights
-          break
-        elif to_stop == "new":
-          stored_biases = self.biases
-          stored_weights = self.weights
-      elif early_stopping == "aGL":
-        to_stop = Early_Stop.average_GL(evaluation["validation accuracy"],
-                                        stop_parameter, aGL_parameter)
-        if to_stop == "stop":
-          print ("End SGD: stop parameter exceeded")
-          self.biases = stored_biases
-          self.weights = stored_weights
-          break
-        elif to_stop == "new":
-          stored_biases = self.biases
-          stored_weights = self.weights 
-
-    if test_data != None:
-      print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
-      
-    return evaluation
-  
-  def backprop2(self, minibatch):
-    images = np.array([image for image, label in minibatch]).reshape(
-      784, len(minibatch))
-    labels = np.array([label for image, label in minibatch]).reshape(
-      10, len(minibatch))
-    weighted_inputs = []
-    a = images #the input (i.e., the "a"s of the first layer) is the image
-    activations = [a]
-
-    nabla_b = np.array([np.zeros(b.shape) for b in self.biases])
-    nabla_w = np.array([np.zeros(w.shape) for w in self.weights])
-    #creating the arrays to store the gradient of the cost function
-
-    #Step 1: forward-propagating the data
-    for b, w in zip(self.biases, self.weights):
-      z = np.dot(w, a) + b
-      weighted_inputs.append(z)
-      a = self.activation.calculate(np.dot(w, a) + b)
-      activations.append(a)
-
-    if self.output_activation.name != self.activation.name:
-      #If the output layer different from the other layers:
-      activations[-1] = self.output_activation.calculate(weighted_inputs[-1])
-
-    #print (activations[-1].shape) --> (10, 10)
-    #print (activations[-2].shape) --> (30, 10)
-    
-    #Step 2: computing the output error
-    error = self.cost.get_error(self.output_activation, activations[-1],
-                                weighted_inputs[-1], labels)
-    nabla_b[-1] = error
-    nabla_w[-1] = np.outer(error, activations[-2])
-    
-    #print (np.array(nabla_w[-1]).shape) --> (100, 300)
-    #print (np.array(nabla_b[-1]).shape) --> (10, 10)
 
     #Step 3: computing the errors for the rest of the layers
     l = len(self.layers) - 2
@@ -526,8 +413,8 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
          body_activation = Activation("sigmoid"),
          output_activation = Activation("sigmoid"),
          large_weight_initialization = False, monitor = False,
-         write = False, early_stopping = None, stop_parameter = None,
-         aGL_parameter = None, show = True):
+         write = False, early_stopping = None, lr_variation = None,
+         show = True):
   start = timer()
   data = mnist.load_data()
 
@@ -539,31 +426,29 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
     digit_classifier.large_weight_initializer()
 
   if show:
-    print ("Evaluation without training: {0}%".format(
+    print ("Evaluation without training: {0}%\n".format(
       digit_classifier.evaluate_accuracy(data["test"])))
-    
-    print ("Learning rate: {0}\nMinibatch size: {1}\
-          \nNumber of epochs: {2}\nStructure: {3}\nCost function: {4}\
-          \nRegularization: {5}\nRegularization parameter: {6}\
-          \nBody activation function: {7}\nOutput activation function: {8}\
-          \nWeight initialization: {9}\nEarly stopping: {10}\nStop parameter: {11}\
-          \naGL parameter: {12}"
-           .format(learning_rate, minibatch_size, num_epochs,
-                   digit_classifier.layers, digit_classifier.cost.name,
-                   digit_classifier.cost.regularization,
-                   digit_classifier.cost.reg_parameter,
-                   digit_classifier.activation.name,
+    print ("Structure: {0}\nBody activation function: {1}\
+           \nOutput activation function: {2}\nWeight initialization: {3}\
+           \nCost function: {4}\nRegularization: {5}\
+           \nRegularization parameter: {6}\nLearning rate: {7}\
+           \nMinibatch size: {8}\nNumber of epochs: {9}"
+           .format(digit_classifier.layers, digit_classifier.activation.name,
                    digit_classifier.output_activation.name,
-                   digit_classifier.weight_init, early_stopping,
-                   stop_parameter, aGL_parameter))
+                   digit_classifier.weight_init, digit_classifier.cost.name,
+                   digit_classifier.cost.regularization,
+                   digit_classifier.cost.reg_parameter, learning_rate,
+                   minibatch_size, num_epochs))
+    print ("Early stopping: {0}\nVariable learning rate schedule: {1}\n"
+           .format(early_stopping, lr_variation))
     print ("Training in process...")
   
   evaluation = digit_classifier.SGD(data["train"], num_epochs, learning_rate,
                                     minibatch_size, validation_data =
                                     data["validation"], test_data = data["test"],
-                                    monitor = monitor, early_stopping = early_stopping,
-                                    stop_parameter = stop_parameter,
-                                    aGL_parameter = aGL_parameter)
+                                    monitor = monitor,
+                                    early_stopping = early_stopping,
+                                    lr_variation = lr_variation)
 
   if write:
     with open("digit_classifier_network.txt", "w") as filestream:
@@ -579,7 +464,8 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
 
 #Testing area
 if __name__ == "__main__":
-  main([784, 100, 10], 0.1, 10, 60, cost_function = Cost("log-likelihood",
+  main([784, 100, 10], 1.0, 10, 60, cost_function = Cost("log-likelihood",
                                                         regularization = "L2",
                                                         reg_parameter = 5.0),
-       output_activation = Activation("softmax"), monitor = False, write = True)
+       output_activation = Activation("softmax"), monitor = False,
+       lr_variation = ["strip_GL", 0.0, 10, 2, 0.002], write = True)

@@ -24,9 +24,8 @@ learning_rate = 0.1
 minibatch_size = 10
 large_weight_initialization = False
 monitor = True
-early_stopping = None
-stop_parameter = None
-aGL_parameter = None
+early_stopping = ["aGL", 0.0, 50]
+lr_variation = ["strip_GL", 0.0, 10, 2, 0.002]
 write = False
 #use the above to change SGD stuff-- not in the main methods!
 
@@ -36,9 +35,7 @@ digit_classifier, evaluation = net.main(structure, learning_rate, minibatch_size
                                         output_activation = output_activation,
                                         large_weight_initialization = large_weight_initialization,
                                         monitor = True, write = write,
-                                        early_stopping = early_stopping,
-                                        stop_parameter = stop_parameter,
-                                        aGL_parameter = stop_parameter)
+                                        early_stopping = early_stopping)
 
 def accuracy_and_cost(evaluation, offset):
   actual = len(evaluation["validation accuracy"])
