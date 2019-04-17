@@ -118,7 +118,7 @@ class Cost(object):
   def get_error(self, activation, activations, weighted_inputs, label):
     if self.name == "mse":
       return self.derivative(activations, label) * \
-             activation.calculate(weighted_inputs)
+             activation.derivative(weighted_inputs)
     elif self.name == "cross-entropy" or self.name == "log-likelihood":
       return (activations - label)
 
@@ -163,18 +163,17 @@ class Early_Stop(object):
       return None
 
   @staticmethod
-  def average_GL2(accuracy, stop_parameter, n):
+  def average_GL(accuracy, stop_parameter, n):
     """returns "stop" if average generalization loss over the last n epochs
     exceeds a parameter. If a new accuracy maximum has been found, this function
     returns "new". Otherwise, the function returns None"""
-    local_opt = max(accuracy)
     if len(accuracy) == 0:
       return "new"
     elif len(accuracy) >= n:
-      accuracy = accuracy[len(accuracy) - n:][:np.argmin(accuracy)]
+      local_opt = max(accuracy)
+      accuracy = accuracy[len(accuracy) - n:]
       average_gl = sum([local_opt - accuracy[-i - 1] for i in range(n)]) / \
                  len(accuracy)
-      print (average_gl)
       if average_gl > stop_parameter:
         return "stop"
       elif local_opt < accuracy[-1]:
@@ -183,19 +182,18 @@ class Early_Stop(object):
       return None
 
   @staticmethod
-  def average_GL(accuracy, stop_parameter, n):
+  def modified_average_GL(accuracy, stop_parameter, n):
     """returns "stop" if average generalization loss (using min instead of max)
     over the last n epochs exceeds a parameter. If a new accuracy maximum has
     been found, this function returns "new". Otherwise, the function returns
     None"""
-    local_min = min(accuracy)
     if len(accuracy) == 0:
       return "new"
     elif len(accuracy) >= n:
       accuracy = accuracy[len(accuracy) - n:]
+      local_min = min(accuracy)
       average_gl = sum([accuracy[-i - 1] - local_min for i in range(n)]) / \
                  len(accuracy)
-      print (average_gl, accuracy)
       if average_gl < stop_parameter:
         return "stop"
       elif max(accuracy) < accuracy[-1]:
@@ -208,11 +206,11 @@ class Early_Stop(object):
     """returns "stop" if generalization loss over the last k epochs
     exceeds a parameter. If a new accuracy maximum has been found, this function
     returns "new". Otherwise, the function returns None"""
-    local_opt = max(accuracy)
-    accuracy = accuracy[np.argmax(accuracy):]
     if len(accuracy) == 0:
       return "new"
     elif len(accuracy) >= k:
+      accuracy = accuracy[np.argmax(accuracy):]
+      local_opt = max(accuracy)
       strip_gl = [0 if local_opt - accuracy[-i - 1] > stop_parameter else 1
                   for i in range(k)]
       if not(bool(strip_gl)):
@@ -352,8 +350,10 @@ class Network(object):
         if lr_variation[0] == "GL":
           change_lr = Early_Stop.GL(to_evaluate, lr_variation[1])
         elif lr_variation[0] == "average_GL":
-          print (to_evaluate)
           change_lr = Early_Stop.average_GL(to_evaluate, lr_variation[1],
+                                            lr_variation[2])
+        elif lr_variation[0] == "modified_average_GL":
+          change_lr = Early_Stop.modified_average_GL(to_evaluate, lr_variation[1],
                                             lr_variation[2])
         elif lr_variation[0] == "strip_GL":
           change_lr = Early_Stop.strip_GL(to_evaluate, lr_variation[1],
@@ -367,7 +367,7 @@ class Network(object):
 
         print ("Learning rate:", learning_rate)
 
-    if isinstance(test_data, list):
+    if not (test_data is None):
       print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
       
     if monitor or early_stopping:
@@ -469,7 +469,8 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
   
   evaluation = digit_classifier.SGD(data["train"], num_epochs, learning_rate,
                                     minibatch_size, validation_data =
-                                    data["validation"], test_data = data["test"],
+                                    data["validation"] if show else None,
+                                    test_data = data["test"] if show else None,
                                     monitor = monitor,
                                     early_stopping = early_stopping,
                                     lr_variation = lr_variation)
@@ -488,9 +489,9 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
 
 #Testing area
 if __name__ == "__main__":
-  main([784, 30, 10], 5.0, 10, 25)
-##  main([784, 100, 10], 1.0, 10, 60, cost_function = Cost("log-likelihood",
-##                                                        regularization = "L2",
-##                                                        reg_parameter = 5.0),
-##       output_activation = Activation("softmax"), monitor = False,
-##       lr_variation = ["average_GL", 0.5, 10, 2, 0.002], write = False)
+  main([784, 100, 10], 1.0, 10, 60, cost_function = Cost("log-likelihood",
+                                                        regularization = "L2",
+                                                        reg_parameter = 5.0),
+       output_activation = Activation("softmax"), monitor = False,
+       lr_variation = ["modified_average_GL", 3.0, 10, 2, 0.002], write = False)
+
