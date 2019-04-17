@@ -117,7 +117,8 @@ class Cost(object):
 
   def get_error(self, activation, activations, weighted_inputs, label):
     if self.name == "mse":
-      return self.derivative * activation.calculate(weighted_inputs)
+      return self.derivative(activations, label) * \
+             activation.calculate(weighted_inputs)
     elif self.name == "cross-entropy" or self.name == "log-likelihood":
       return (activations - label)
 
@@ -162,7 +163,7 @@ class Early_Stop(object):
       return None
 
   @staticmethod
-  def average_GL(accuracy, stop_parameter, n):
+  def average_GL2(accuracy, stop_parameter, n):
     """returns "stop" if average generalization loss over the last n epochs
     exceeds a parameter. If a new accuracy maximum has been found, this function
     returns "new". Otherwise, the function returns None"""
@@ -170,12 +171,34 @@ class Early_Stop(object):
     if len(accuracy) == 0:
       return "new"
     elif len(accuracy) >= n:
-      accuracy = accuracy[:n]
+      accuracy = accuracy[len(accuracy) - n:][:np.argmin(accuracy)]
       average_gl = sum([local_opt - accuracy[-i - 1] for i in range(n)]) / \
                  len(accuracy)
+      print (average_gl)
       if average_gl > stop_parameter:
         return "stop"
       elif local_opt < accuracy[-1]:
+        return "new"
+    else:
+      return None
+
+  @staticmethod
+  def average_GL(accuracy, stop_parameter, n):
+    """returns "stop" if average generalization loss (using min instead of max)
+    over the last n epochs exceeds a parameter. If a new accuracy maximum has
+    been found, this function returns "new". Otherwise, the function returns
+    None"""
+    local_min = min(accuracy)
+    if len(accuracy) == 0:
+      return "new"
+    elif len(accuracy) >= n:
+      accuracy = accuracy[len(accuracy) - n:]
+      average_gl = sum([accuracy[-i - 1] - local_min for i in range(n)]) / \
+                 len(accuracy)
+      print (average_gl, accuracy)
+      if average_gl < stop_parameter:
+        return "stop"
+      elif max(accuracy) < accuracy[-1]:
         return "new"
     else:
       return None
@@ -329,6 +352,7 @@ class Network(object):
         if lr_variation[0] == "GL":
           change_lr = Early_Stop.GL(to_evaluate, lr_variation[1])
         elif lr_variation[0] == "average_GL":
+          print (to_evaluate)
           change_lr = Early_Stop.average_GL(to_evaluate, lr_variation[1],
                                             lr_variation[2])
         elif lr_variation[0] == "strip_GL":
@@ -388,7 +412,7 @@ class Network(object):
     return (nabla_b, nabla_w) #returns the gradient of the cost function
 
   def evaluate_accuracy(self, test_data, is_train = False):
-    #returns number correct when the network is evaluated using test data
+    #returns percent correct when the network is evaluated using test data
     test_results = [(np.argmax(self.feed_forward(image)), label)
                     for (image, label) in test_data]
     if is_train:
@@ -464,8 +488,9 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
 
 #Testing area
 if __name__ == "__main__":
-  main([784, 100, 10], 1.0, 10, 60, cost_function = Cost("log-likelihood",
-                                                        regularization = "L2",
-                                                        reg_parameter = 5.0),
-       output_activation = Activation("softmax"), monitor = False,
-       lr_variation = ["average_GL", 0.5, 10, 2, 0.002], write = False)
+  main([784, 30, 10], 5.0, 10, 25)
+##  main([784, 100, 10], 1.0, 10, 60, cost_function = Cost("log-likelihood",
+##                                                        regularization = "L2",
+##                                                        reg_parameter = 5.0),
+##       output_activation = Activation("softmax"), monitor = False,
+##       lr_variation = ["average_GL", 0.5, 10, 2, 0.002], write = False)
