@@ -167,9 +167,6 @@ class Early_Stop(object):
     exceeds a parameter. If a new accuracy maximum has been found, this function
     returns "new". Otherwise, the function returns None"""
     local_opt = max(accuracy)
-##    accuracy = accuracy[np.argmax(accuracy):]
-##    """the above line ensures that GL is only evaluated after the
-##    locally optimal point"""
     if len(accuracy) == 0:
       return "new"
     elif len(accuracy) >= n:
@@ -257,6 +254,7 @@ class Network(object):
     if lr_variation:
       original_lr = learning_rate
       change_lr = False
+      to_evaluate = []
       """format for lr_variation parameter is [GL_type, stop_parameter,
       aGL_strip_GL_parameter, lr_variation_parameter, lr_variation_cutoff]"""
     
@@ -296,8 +294,10 @@ class Network(object):
       else:
         validation_evaluate = self.evaluate_accuracy(validation_data)
         print ("Epoch {0}: {1}%".format(epoch_num + 1, validation_evaluate))
-        if early_stopping or monitor or lr_variation:
+        if early_stopping or monitor:
           evaluation["validation accuracy"].append(validation_evaluate)
+        if lr_variation:
+          to_evaluate.append(validation_evaluate)
         if monitor:
           evaluation["train accuracy"].append(self.evaluate_accuracy(
             training_data, is_train = True))
@@ -327,17 +327,16 @@ class Network(object):
 
       if lr_variation:
         if lr_variation[0] == "GL":
-          change_lr = Early_Stop.GL(evaluation["validation accuracy"],
-                                  lr_variation[1])
+          change_lr = Early_Stop.GL(to_evaluate, lr_variation[1])
         elif lr_variation[0] == "average_GL":
-          change_lr = Early_Stop.average_GL(evaluation["validation accuracy"],
-                                          lr_variation[1], lr_variation[2])
+          change_lr = Early_Stop.average_GL(to_evaluate, lr_variation[1],
+                                            lr_variation[2])
         elif lr_variation[0] == "strip_GL":
-          change_lr = Early_Stop.strip_GL(evaluation["validation accuracy"],
-                                        lr_variation[1], lr_variation[2])
-
+          change_lr = Early_Stop.strip_GL(to_evaluate, lr_variation[1],
+                                          lr_variation[2])
         if change_lr == "stop":
           learning_rate /= lr_variation[3]
+          to_evaluate = []
         if original_lr * lr_variation[4] >= learning_rate:
           print ("End SGD: learning rate parameter exceeded")
           break

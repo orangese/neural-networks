@@ -70,7 +70,7 @@ import numpy as np #parsing the files
 import gzip #for unzipping files
 
 def to_int(b):
-  #function that takes in a bytearray and returns an integer
+  #function that takes in a byte array and returns an integer
   return int(codecs.encode(b, "hex"), 16)
 
 def normalize(raw_array, range_):
@@ -116,8 +116,8 @@ def load_file(file, mode):
     if magic_number == 2049: #2049 is the magic number for labels
       parsed = np.frombuffer(data, dtype = np.uint8, offset = 8)
       """almost all of the work is done by the line above. In essence, the line
-      above is converting the file from bytearray to a reshaped numpy array
-      with dimesions (60000,).
+      above is converting the file from byte array to a re-shaped numpy array
+      with dimensions (60000,).
       (Note the difference between (60000,) and (60000, 1): an array of shape
       (60000,) is a 1-D array of length 60000, while an array of
       shape (60000, 1) is a 60000-D array with each dimension of length 1"""
@@ -130,7 +130,7 @@ def load_file(file, mode):
       """the next four items give the number of columns in one image"""
       parsed = normalize(np.frombuffer(data, dtype = np.uint8, offset = 16).
                          reshape(length, num_rows * num_columns, 1), (0, 255))
-      """converting the file from bytearray to reshaped numpy array with
+      """converting the file from byte array to re-shaped numpy array with
        dimensions (length, num_rows * num_columns, 1) in order to prepare it
        for usage in the digit_classifier program."""
     else:
