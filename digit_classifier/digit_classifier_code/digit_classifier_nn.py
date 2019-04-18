@@ -9,10 +9,11 @@ Activation function(s): sigmoid, softmax
 Architecture: chosen by user
 Cost function(s): MSE, cross-entropy, log-likelihood
 Training: vanilla SGD and BP
-Early stopping: GL, aGL
+Early stopping: GL, aGL, minimum aGL, strip GL, average improvement
 Regularization: L1, L2
-Accuracy: 98.02%
-Hyperparameters: chosen by user
+Learning rate: variable (uses early stopping to determine when to switch)
+Other hyperparameters: chosen by user
+Accuracy: 98.20% (60 epochs)
 
 Progress:
 1. 2/10/19: program running but encountering error:
@@ -76,7 +77,10 @@ Progress:
 
 6. 4/15/19: rewrite of the mnist_loader.py program to fix above error
   (previously, the mnist_loader used was from the book, "Neural Networks and
-  Deep Learning")
+  Deep Learning"). The key change was the addition of a normalizer function,
+  which converted the value of the pixels (0-255) to a sigmoidal range (0-1).
+  The reason for the previous np.exp() overflow error was the failure to
+  normalize.
 
 """
 
@@ -145,6 +149,7 @@ class Activation(object):
       return gradient
 
 class Early_Stop(object):
+  #BEST METHOD: average improvement, others are just for demonstration
   """Note that all the methods in this class need to be used in conjunction
   with some kind of loop-- they need to be supplemented with some other code"""
 
@@ -220,6 +225,24 @@ class Early_Stop(object):
     else:
       return None
 
+  @staticmethod
+  def average_improvement(accuracy, stop_parameter, n):
+    """returns "stop" if average improvement over the last n epochs
+    exceeds a parameter. If a new accuracy maximum has been found, this function
+    returns "new". Otherwise, the function returns None"""
+    if len(accuracy) == 0:
+      return "new"
+    elif len(accuracy) >= n:
+      accuracy = accuracy[len(accuracy) - n:]
+      average_improvement = sum([accuracy[-i - 1] - accuracy[-i - 2] for i in
+                        range(n - 1)]) / len(accuracy)
+      if average_improvement < stop_parameter:
+        return "stop"
+      elif max(accuracy) < accuracy[-1]:
+        return "new"
+    else:
+      return None
+
 class Network(object): 
   
   def __init__(self, layers, cost_function = Cost("mse"),
@@ -286,6 +309,7 @@ class Network(object):
                       range(0, len(epoch), minibatch_size)]
       """divide epoch into minibatches (the size of the minibatches is a
       hyperparameter, or a parameter not chosen by the program)"""
+      print ("Learning rate:", learning_rate)
       
       for minibatch in minibatches:
         nabla_b = [np.zeros(b.shape) for b in self.biases]
@@ -334,6 +358,10 @@ class Network(object):
         elif early_stopping[0] == "aGL":
           to_stop = Early_Stop.average_GL(evaluation["validation accuracy"],
                                           early_stopping[1], early_stopping[2])
+        elif early_stopping[0] == "modified_aGL":
+          to_stop = Early_Stop.modified_average_GL(
+            evaluation["validation accuracy"], early_stopping[1],
+            early_stopping[2])
         elif early_stopping[0] == "strip_GL":
           to_stop = Early_Stop.strip_GL(evaluation["validation accuracy"],
                                         early_stopping[1], early_stopping[2])
@@ -358,14 +386,15 @@ class Network(object):
         elif lr_variation[0] == "strip_GL":
           change_lr = Early_Stop.strip_GL(to_evaluate, lr_variation[1],
                                           lr_variation[2])
+        elif lr_variation[0] == "average_improvement":
+          change_lr = Early_Stop.average_improvement(to_evaluate, lr_variation[1],
+                                          lr_variation[2])
         if change_lr == "stop":
           learning_rate /= lr_variation[3]
           to_evaluate = []
         if original_lr * lr_variation[4] >= learning_rate:
           print ("End SGD: learning rate parameter exceeded")
           break
-
-        print ("Learning rate:", learning_rate)
 
     if not (test_data is None):
       print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
@@ -437,37 +466,37 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
          body_activation = Activation("sigmoid"),
          output_activation = Activation("sigmoid"),
          large_weight_initialization = False, monitor = False,
-         write = False, early_stopping = None, lr_variation = None,
+         write = None, early_stopping = None, lr_variation = None,
          show = True):
   start = timer()
   data = mnist.load_data()
 
-  digit_classifier = Network(structure, cost_function = cost_function,
+  net = Network(structure, cost_function = cost_function,
                              body_activation = body_activation,
                              output_activation = output_activation)
 
   if large_weight_initialization:
-    digit_classifier.large_weight_initializer()
+    net.large_weight_initializer()
 
   if show:
     print ("Evaluation without training: {0}%\n".format(
-      digit_classifier.evaluate_accuracy(data["test"])))
+      net.evaluate_accuracy(data["test"])))
     print ("Structure: {0}\nBody activation function: {1}\
            \nOutput activation function: {2}\nWeight initialization: {3}\
            \nCost function: {4}\nRegularization: {5}\
            \nRegularization parameter: {6}\nLearning rate: {7}\
            \nMinibatch size: {8}\nNumber of epochs: {9}"
-           .format(digit_classifier.layers, digit_classifier.activation.name,
-                   digit_classifier.output_activation.name,
-                   digit_classifier.weight_init, digit_classifier.cost.name,
-                   digit_classifier.cost.regularization,
-                   digit_classifier.cost.reg_parameter, learning_rate,
+           .format(net.layers, net.activation.name,
+                   net.output_activation.name,
+                   net.weight_init, net.cost.name,
+                   net.cost.regularization,
+                   net.cost.reg_parameter, learning_rate,
                    minibatch_size, num_epochs))
     print ("Early stopping: {0}\nVariable learning rate schedule: {1}\n"
            .format(early_stopping, lr_variation))
     print ("Training in process...")
   
-  evaluation = digit_classifier.SGD(data["train"], num_epochs, learning_rate,
+  evaluation = net.SGD(data["train"], num_epochs, learning_rate,
                                     minibatch_size, validation_data =
                                     data["validation"] if show else None,
                                     test_data = data["test"] if show else None,
@@ -475,23 +504,23 @@ def main(structure, learning_rate, minibatch_size, num_epochs,
                                     early_stopping = early_stopping,
                                     lr_variation = lr_variation)
 
-  if write:
-    with open("digit_classifier_network.txt", "w") as filestream:
-      filestream.write("weights: " + str(digit_classifier.weights) + "\nbiases: "+
-                 str(digit_classifier.biases))
+  if write != None:
+    with open(write, "w") as filestream:
+      filestream.write("weights: " + str(net.weights) + "\nbiases: "+
+                 str(net.biases))
 
   end = timer()
 
   if show:
     print ("Time elapsed:", end - start, "seconds")
   
-  return (digit_classifier, evaluation)
+  return (net, evaluation)
 
 #Testing area
 if __name__ == "__main__":
-  main([784, 100, 10], 1.0, 10, 60, cost_function = Cost("log-likelihood",
+  main([784, 100, 10], 2.0, 10, 60, cost_function = Cost("log-likelihood",
                                                         regularization = "L2",
                                                         reg_parameter = 5.0),
        output_activation = Activation("softmax"), monitor = False,
-       lr_variation = ["modified_average_GL", 3.0, 10, 2, 0.002], write = False)
+       lr_variation = ["average_improvement", 0.25, 5, 2, 0.002])
 
