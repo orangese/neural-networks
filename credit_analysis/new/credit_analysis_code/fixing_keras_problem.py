@@ -6,7 +6,6 @@ when rendering/posting. See instructions
 
 """
 
-import tensorflow as tf
 import keras
 import numpy as np
 
@@ -44,6 +43,7 @@ def feed_forward(parsed_model, a):
 
 #step one: creating the sample model
 #("model" should be replaced with the credit analysis network in "models.py")
+#this step goes in "models.py"
 model = keras.Sequential([
   keras.layers.Dense(7, input_shape = (5, ), activation = "sigmoid")
 ])
@@ -52,11 +52,13 @@ model.compile(loss = "binary_crossentropy", optimizer = "adam",
 
 #step two: fake data
 #replace with real independent variables that will be fed into net
+#this step goes in "view.py"
 fake_independent_vars = np.array([1, 2, 3, 4, 5])
 
 #step three: parse model in "models.py"
+#this step goes in "models.py"
 parsed_model = parse_net(model)
-#don't forget, this line (and everything above it) goes in "models.py"!
 
 #step four: go to "view.py" and import predict and import parsed_model
+#this step goes in "view.py"
 print (predict(parsed_model, fake_independent_vars))
