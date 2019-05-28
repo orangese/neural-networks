@@ -1,8 +1,9 @@
 """
 
+"fixing_keras_problem.py"
+
 This code fixes the problem in Keras where model.predict did not work
 when rendering/posting. See instructions for more details.
-
 
 """
 
