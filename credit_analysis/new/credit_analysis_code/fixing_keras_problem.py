@@ -12,7 +12,7 @@ import numpy as np
 
 #copy this function into "models.py"
 def predict(parsed_model, vars_):
-  #returns a, b, c, d, e, f, or g based on network prediction
+  #returns A, B, C, D, E, F, or G based on the network's prediction
   range_ = ["A", "B", "C", "D", "E", "F", "G"]
   prediction = feed_forward(parsed_model,
                             np.array([float(var) for var in vars_]))
