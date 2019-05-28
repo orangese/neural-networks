@@ -17,9 +17,13 @@ def predict(parsed_model, vars_):
 #also goes in "models.py"
 def parse_net(model):
   weights = np.array([model.layers[i].get_weights()[0]
-                      for i in range(len(model.layers))]).reshape(1, 10, 2)
+                      for i in range(len(model.layers))])
+  weights = weights.reshape(weights.shape[0], weights.shape[2],
+                            weights.shape[1])
   biases = np.array([model.layers[i].get_weights()[1]
-                     for i in range(len(model.layers))]).reshape(1, 10, 1)
+                     for i in range(len(model.layers))])
+  biases = biases.reshape(biases.shape[0], biases.shape[1], 1)
+  print (biases.shape, weights.shape)
   return (biases, weights)
 
 #also goes in "models.py"
