@@ -45,6 +45,12 @@ def evaluate(data, model):
 
   return evaluation
 
+def save(model, filename):
+  model.save(filename)
+
+def load_model(filename):
+  model = keras.models.load_model(filename)
+
 #Testing area
 if __name__ == "__main__":
   data, cols, big_data = load_data(0.8, keras_ = True)
