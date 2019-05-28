@@ -1,7 +1,7 @@
 """
 
-This code fixes the problem in keras where model.predict did not work
-when rendering/posting. See instructions
+This code fixes the problem in Keras where model.predict did not work
+when rendering/posting. See instructions for more details.
 
 
 """
@@ -19,6 +19,7 @@ def predict(parsed_model, vars_):
 
 #also goes in "models.py"
 def parse_net(model):
+  #returns a model's weights and biases
   weights = np.array([model.layers[i].get_weights()[0]
                       for i in range(len(model.layers))])
   weights = weights.reshape(weights.shape[0], weights.shape[2],
@@ -30,6 +31,8 @@ def parse_net(model):
 
 #also goes in "models.py"
 def feed_forward(parsed_model, a):
+  #feed-forwards the input, "a", through a skeleton network
+  #which will only have weights and biases (not a Keras object)
   a = a.reshape(len(a), 1)
   biases = parsed_model[0]
   weights = parsed_model[1]
@@ -47,8 +50,6 @@ def feed_forward(parsed_model, a):
 model = keras.Sequential([
   keras.layers.Dense(7, input_shape = (5, ), activation = "sigmoid")
 ])
-model.compile(loss = "binary_crossentropy", optimizer = "adam",
-              metrics = ["accuracy"])
 
 #step two: fake data
 #replace with real independent variables that will be fed into net
@@ -59,6 +60,7 @@ fake_independent_vars = np.array([1, 2, 3, 4, 5])
 #this step goes in "models.py"
 parsed_model = parse_net(model)
 
-#step four: go to "view.py" and import predict and import parsed_model
+#step four: go to "view.py" and import the "predict" function
+#and import the "parsed_model" variable
 #this step goes in "view.py"
 print (predict(parsed_model, fake_independent_vars))
