@@ -78,25 +78,33 @@ Progress:
 import sys
 sys.path.insert(0, "/Users/ryan/Documents/Coding/neural_networks")
 import mlp_nn as mlp #vanilla feed-forward neural network
-import mnist_loader as mnist
+import mnist_loader
+import numpy as np
 
 #Testing area
 if __name__ == "__main__":
-  data = mnist.load_data()
+  data = mnist_loader.load_data()
+  data["train"] = data["train"][:1000]
   structure = [784, 100, 10]
-  learning_rate = 2.0
+  learning_rate = 0.2
   minibatch_size = 10
   num_epochs = 60
-  cost = mlp.Cost("cross-entropy", regularization = "L2", reg_parameter = 5.0)
+  momentum = 0.9
+  cost_function = mlp.Cost("cross-entropy", regularization = "L2",
+                  reg_parameter = 2.0)
   output_activation = mlp.Activation("sigmoid")
-  large_weight_initialization = False
+  weight_init = "regular"
   write = None
-  lr_variation = ["average_improvement", 0.1, 10, 2, 0.002]
+  lr_variation = None#[mlp.Early_Stop.average_improvement, 0.1, 10, 1.05, 0.002]
   early_stopping = None
-  
-  mlp.main(data, structure, learning_rate, minibatch_size, num_epochs,
-           cost_function = cost,output_activation = output_activation,
-           large_weight_initialization = large_weight_initialization,
-           early_stopping = early_stopping, lr_variation = lr_variation,
-           monitor = False, show = True, write = write)
+  dropout = None#[[0, 1], [0.9, 0.5]]
+
+  classifier = mlp.Network(structure, cost_function = cost_function,
+                           output_activation = output_activation,
+                           weight_init = weight_init)
+  classifier.train(data, learning_rate, minibatch_size, num_epochs,
+                   momentum = momentum, dropout = dropout,
+                   early_stopping = early_stopping,
+                   lr_variation = lr_variation, monitor = False,
+                   show = True, write = write)
 

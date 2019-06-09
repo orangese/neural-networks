@@ -12,12 +12,18 @@ import pandas as pd
 import xlrd as xl
 import numpy as np
 
+#Globals
+globals_ = {}
+
 #Data processing
 def sigmoid_normalize(raw_array, range_ = None):
   #function that converts a list of values between any range to [0, 1]
   array = np.copy(raw_array).astype(np.float32)
-  if range_ == None:
-    range_ = (min(array), max(array))
+  if range_ is None:
+    try:
+      range_ = (min(array), max(array))
+    except TypeError:
+      print (raw_array)
   if range_ == (0, 1):
     return array
   #Step 1: subtract minimum from everything
@@ -32,28 +38,38 @@ def convert_categorical(categoricals, range_):
   to_int = len(range_)
   fractions = np.array([i / (to_int - 1)  for i in range(to_int)],
                        dtype = np.float32)
-  return np.nan_to_num(np.array([fractions[range_.index(categorical)]
-          for categorical in categoricals], dtype = np.float32))
+  if isinstance(categoricals, str):
+    return fractions[range_.index(categoricals)]
+  else:
+    return np.nan_to_num(np.array([fractions[range_.index(categorical)]
+            for categorical in categoricals], dtype = np.float32))
 
 def to_int(n):
   #turns every element in a list into an int
-  fin = []
-  for element in n:
+  if isinstance(n, list):
+    fin = []
+    for element in n:
+      try:
+        fin.append(int(element))
+      except ValueError:
+        fin.append(0)
+    return np.nan_to_num(np.array(fin, dtype = np.float32))
+  else:
     try:
-      fin.append(int(element))
+      return int(n)
     except ValueError:
-      fin.append(0)
-  return np.nan_to_num(np.array(fin, dtype = np.float32))
+      return 0
 
 def vectorize(value, range_):
   #takes a value and vectorizes it (one-hot encoder)
+  #to devectorize, use np.argmax(vector)
   result = np.zeros((len(range_), ), dtype = np.float32)
   result[range_.index(value)] = 1.0
   return result
 
 def strip(n):
   #strips a list of strings of everything but digits and decimals
-  if isinstance(n, str):
+  if isinstance(n, str) or isinstance(n, float) or isinstance(n, int):
     return "".join(ch for ch in str(n) if str(ch).isdigit() or str(ch) == ".")
   else:
     return ["".join(ch for ch in str(s) if str(ch).isdigit() or str(ch) == ".")
@@ -77,31 +93,68 @@ def unison_shuffle(a, b):
 def load_file(filestream):
   #reads a specific excel file and prepares it for data processing
   data = pd.read_excel(filestream)
-  del data["sub_grade"]
   del data["loan_status"]
+  del data["funded_amnt"]
+  del data["sub_grade"]
+  del data["funded_amnt_inv"]
+  del data["inq_last_6mths"]
+  del data["open_acc"]
+  del data["revol_bal"]
+  del data["revol_util"]
+  del data["total_acc"]
+  del data["total_pymnt"]
+  del data["total_pymnt_inv"]
+  del data["total_rec_prncp"]
+  del data["total_rec_int"]
+  del data["total_rec_late_fee"]
+  del data["recoveries"]
+  del data["collection_recovery_fee"]
+  del data["last_pymnt_amnt"]
 
   labels = []
   range_ = get_range(data["grade"])
   for label in np.asarray(data["grade"]):
     labels.append(vectorize(label, range_))
-  
   del data["grade"]
 
   for feature in data.columns:
     if feature == "term" or feature == "emp_length":
+      globals_[feature] = range_
       data[feature] = to_int(strip(data[feature]))
     try:
+      globals_[feature] = (min(data[feature]), max(data[feature]))
       data[feature] = sigmoid_normalize(data[feature])
     except ValueError:
-      data[feature] = convert_categorical(data[feature],
-                                          get_range(data[feature]))
+      range_ = get_range(data[feature])
+      globals_[feature] = [r.lower() for r in range_]
+      data[feature] = convert_categorical(data[feature], range_)
 
   return (data.values.reshape(len(data.index), len(data.columns), 1),
           np.array(labels), data.columns)
- 
+
+def parse_inputs(inputs_, cols):
+  #parses a single set of inputs
+  parsed = []
+  for input_ in inputs_:
+    if cols[inputs_.index(input_)] == "term" or \
+       cols[inputs_.index(input_)] == "emp_length":
+      temp = to_int(strip(input_))
+    try:
+      temp = sigmoid_normalize(strip(input_),
+                                      range_ = globals_[
+                                        cols[inputs_.index(input_)]])
+    except ValueError:
+      temp = convert_categorical(input_,
+                                   globals_[cols[inputs_.index(input_)]])
+
+    parsed.append(temp)
+
+  return np.array(parsed).reshape(1, len(cols))
+
 def load_data(ratio, keras_ = True):
   #data processer (essentially a wrapper for "load_file()")
-  inputs, labels, cols = load_file("/Users/ryan/Documents/Coding/neural_networks/credit_analysis/new/credit_analysis_dataset/credit_analysis_dataset.xlsx")
+  inputs, labels, cols = load_file(
+    "/Users/ryan/Documents/Coding/neural_networks/credit_analysis/new/credit_analysis_dataset/credit_analysis_dataset.xlsx")
   
   if not keras_:
     big_data = np.array(list(zip(inputs, labels)))
@@ -113,7 +166,7 @@ def load_data(ratio, keras_ = True):
             "test": np.array(big_data[num_validation + num_train:])}
   else:
     big_data = unison_shuffle(inputs.reshape(len(inputs), len(inputs[0])),
-                              labels.reshape(len(labels), len(labels[0])))
+                                labels.reshape(len(labels), len(labels[0])))
     num_train = int(ratio * len(big_data[0]))
     num_validation = int((len(big_data[0]) - num_train) / 2)
     

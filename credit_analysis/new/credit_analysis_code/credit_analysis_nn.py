@@ -5,39 +5,40 @@
 A program that uses keras to build and train a neural network to grade
 the quality of a loan.
 
-Accuracy: 94.95% (25 epochs)
+Accuracy: 96.14% (25 epochs)
 
 """
 
 #Libraries
-from credit_analysis_loader import load_data
+from credit_analysis_loader import load_data, parse_inputs
 import keras
+import numpy as np
 
 #Neural network (using keras)
 def build():
-  reg = keras.regularizers.l2(0.001)
+  #builds model
   model = keras.Sequential([
-    keras.layers.Dense(20, input_shape = (24, ), activation = "sigmoid",
-                       kernel_regularizer = None),
-    keras.layers.Dense(20, input_shape = (20, ), activation = "sigmoid",
-                       kernel_regularizer = None),
-    keras.layers.Dense(7, input_shape = (20, ), activation = "softmax",
-                      kernel_regularizer = None)])
+    keras.layers.Dense(200, input_shape = (9, ), activation = "relu"),
+    keras.layers.Dense(200, input_shape = (200, ), activation = "relu"),
+    keras.layers.Dense(7, input_shape = (200, ), activation = "softmax")])
+    
   model.compile(loss = "binary_crossentropy", optimizer = "adam",
                 metrics = ["accuracy"])
   
   return model
 
 def train(data, model):
+  #trains model
   tr_X, tr_Y = data["train"]
   
   model.fit(tr_X, tr_Y,
-            epochs = 25, batch_size = 32, verbose = 2,
+            epochs = 1, batch_size = 32, verbose = 2,
             validation_data = data["validation"])
   
   return model
 
 def evaluate(data, model):
+  #tests model
   te_X, te_Y = data["test"]
 
   evaluation = model.evaluate(te_X, te_Y, verbose = 0)
@@ -45,16 +46,34 @@ def evaluate(data, model):
 
   return evaluation
 
-def save(model, filename):
-  model.save(filename)
+def test(model, cols):
+  #tests model on user input
+  #REQUIREMENTS: interest rate must be in decimal form (i.e., if
+  #interest rate is 30%, enter 0.3 for "int_rate") and everything
+  #must be lowercase
+  
+  inputs_ = [input(col + ": ") for col in cols]
 
-def load_model(filename):
-  model = keras.models.load_model(filename)
+  parsed_inputs = parse_inputs(inputs_, cols)
+
+  range_ = ["A", "B", "C", "D", "E", "F", "G"]
+  return range_[np.argmax(model.predict(parsed_inputs))]
 
 #Testing area
 if __name__ == "__main__":
-  data, cols, big_data = load_data(0.8, keras_ = True)
+  data, cols, big_data = load_data(0.6)
+  print ("Independents:", list(cols))
 
   print ("Starting training")
   model = train(data, build())
   evaluation = evaluate(data, model)
+
+  error = 0
+  for ex, label in zip(data["test"][0], data["test"][1]):
+    prediction = np.argmax(model.predict(ex.reshape(1, len(ex))))
+    true = np.argmax(label)
+    error += abs(prediction - true)
+  print ("Average error:", error / len(data["test"][0]))
+
+  print (test(model, cols))
+
