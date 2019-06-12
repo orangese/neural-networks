@@ -1,7 +1,7 @@
 
 """
 
-"digit_classifier_display.py"
+"mnist_display.py"
 
 A program to plot the progress and results of the digit classifying
 neural network.
