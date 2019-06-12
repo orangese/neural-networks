@@ -84,20 +84,19 @@ import numpy as np
 #Testing area
 if __name__ == "__main__":
   data = mnist_loader.load_data()
-  data["train"] = data["train"][:1000]
   structure = [784, 100, 10]
-  learning_rate = 0.2
+  learning_rate = 0.4
   minibatch_size = 10
   num_epochs = 60
-  momentum = 0.9
+  momentum = None
   cost_function = mlp.Cost("cross-entropy", regularization = "L2",
                   reg_parameter = 2.0)
   output_activation = mlp.Activation("sigmoid")
   weight_init = "regular"
   write = None
-  lr_variation = None#[mlp.Early_Stop.average_improvement, 0.1, 10, 1.05, 0.002]
+  lr_variation = None
   early_stopping = None
-  dropout = None#[[0, 1], [0.9, 0.5]]
+  dropout = [[1], [0.5]]
 
   classifier = mlp.Network(structure, cost_function = cost_function,
                            output_activation = output_activation,

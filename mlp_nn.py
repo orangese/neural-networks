@@ -60,11 +60,9 @@ class Cost(object):
              / (-1.0 * len(pairs))
 
     if self.reg_parameter == "L2":
-      reg_term = np.sum(self.weights ** 2.0)
-      cost += reg_term
+      cost += np.sum(self.weights ** 2.0)
     elif self.reg_parameter == "L1":
-      reg_term = np.sum(np.absolute(self.weights))
-      cost += reg_term
+      cost += np.sum(np.absolute(self.weights))
     
     return cost
 
@@ -90,11 +88,12 @@ class Activation(object):
     if self.name == "sigmoid":
       return self.calculate(z) * (1.0 - self.calculate(z))
     elif self.name == "softmax":
-      if j == None or i == None:
+      if j is None or i is None:
         raise TypeError("arguments 'i' or 'j' not provided") 
-      gradient = np.array([-1.0 * self.calculate(zk)[j] * self.calculate(zk)[i]
-                  if j != i else self.calculate(z)[j] * \
-                  (1.0 - self.calculate(z)[j]) for zk in z])
+      gradient = np.array([-1.0 * self.calculate(z_k)[j] * 
+                           self.calculate(z_k)[i] if j != i else 
+                           self.calculate(z)[j] * (1.0 - self.calculate(z)[j])
+                           for z_k in z])
       return gradient
 
 class Early_Stop(object):
@@ -164,33 +163,36 @@ class Network(object):
     shape (n, m), where n is the number of neurons in the layer
     and m is the number of layers in the previous layer"""
     self.layers = layers
-    self.large_weight_initializer() if weight_init == "large" else \
-                               self.regular_weight_initializer()
-    self.biases = np.array([np.random.randn(layer, 1) for layer in
-                            self.layers[1:]])
-  
+    self.large_weight_init() if weight_init == "large" else \
+                               self.regular_weight_init()
+    self.bias_init()
+
     self.cost = cost_function
     self.activation = body_activation
     self.output_activation = output_activation
 
-  def regular_weight_initializer(self):
+  def regular_weight_init(self):
     #squashes the distribution of pre-train weights, leading to better training
     self.weights = np.array([np.random.randn(next_layer, layer) / np.sqrt(layer)
                              for layer, next_layer in zip(
                                self.layers, self.layers[1:])])
     self.weight_init = "regular"
 
-  def large_weight_initializer(self):
+  def large_weight_init(self):
     #does not squash distribution of pre-train weights
     self.weights = np.array([np.random.randn(next_layer, layer)
                              for layer, next_layer in zip(
                                self.layers, self.layers[1:])])
     self.weight_init = "large"
 
+  def bias_init(self):
+    #regular bias initializer
+    self.biases = np.array([np.random.randn(layer, 1) for layer in
+                            self.layers[1:]])
+
   def feed_forward(self, a):
     #feeds an input into the network and returns its output
     for b, w in zip(self.biases[:-1], self.weights[:-1]):
-      print (w.shape, a.shape, b.shape)
       a = self.activation.calculate(np.dot(w, a) + b)
     a = self.output_activation.calculate(np.dot(self.weights[-1], a) +
                                          self.biases[-1])
@@ -302,7 +304,7 @@ class Network(object):
 
       if dropout:
         for layer in dropout[0]:
-          self.weights[layer] *= dropout[1][layer]
+          self.weights[layer] *= dropout[1][dropout[0].index(layer)]
 
     if not (test_data is None):
       print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))

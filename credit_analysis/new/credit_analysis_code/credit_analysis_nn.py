@@ -46,13 +46,14 @@ def evaluate(data, model):
 
   return evaluation
 
-def test(model, cols):
+def test(model, cols, inputs_ = None):
   #tests model on user input
   #REQUIREMENTS: interest rate must be in decimal form (i.e., if
   #interest rate is 30%, enter 0.3 for "int_rate") and everything
   #must be lowercase
   
-  inputs_ = [input(col + ": ") for col in cols]
+  if inputs_ is None: inputs_ = [input(col + ": ") for col in cols]
+  #WHEN USING, SET inputs_ EQUAL TO THE INPUT FROM WEBPAGE!
 
   parsed_inputs = parse_inputs(inputs_, cols)
 
