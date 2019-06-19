@@ -32,7 +32,7 @@ def train(data, model):
   tr_X, tr_Y = data["train"]
   
   model.fit(tr_X, tr_Y,
-            epochs = 1, batch_size = 32, verbose = 2,
+            epochs = 5, batch_size = 32, verbose = 2,
             validation_data = data["validation"])
   
   return model
@@ -54,10 +54,12 @@ def test(model, cols, inputs_ = None):
   
   if inputs_ is None: inputs_ = [input(col + ": ") for col in cols]
   #WHEN USING, SET inputs_ EQUAL TO THE INPUT FROM WEBPAGE!
+  print (inputs_)
 
   parsed_inputs = parse_inputs(inputs_, cols)
 
-  range_ = ["A", "B", "C", "D", "E", "F", "G"]
+  range_ = ["A", "B", "C", "D", "E", "F"]
+  
   return range_[np.argmax(model.predict(parsed_inputs))]
 
 #Testing area
@@ -74,7 +76,7 @@ if __name__ == "__main__":
     prediction = np.argmax(model.predict(ex.reshape(1, len(ex))))
     true = np.argmax(label)
     error += abs(prediction - true)
-  print ("Average error:", error / len(data["test"][0]))
+  print ("Average error:", round(error / len(data["test"][0]), 5))
 
-  print (test(model, cols))
-
+  for i in range(10):
+    print (test(model, cols))

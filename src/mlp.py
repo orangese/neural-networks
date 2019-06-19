@@ -437,3 +437,4 @@ class Network(object):
       print ("Time elapsed:", round(end - start, 2), "seconds")
     
     return evaluation
+

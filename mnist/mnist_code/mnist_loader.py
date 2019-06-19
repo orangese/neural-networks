@@ -143,12 +143,13 @@ def load_data():
   MNIST files and stores the result in a dictionary"""
   data = {"train": [], "validation": [], "test": []}
   
-  train_images = load_file("/Users/ryan/Documents/Coding/neural_networks/digit_classifier/digit_classifier_dataset/train-images-idx3-ubyte.gz",
+  train_images = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset/train-images-idx3-ubyte.gz",
                            "rb")
-  train_labels = load_file("/Users/ryan/Documents/Coding/neural_networks/digit_classifier/digit_classifier_dataset/train-labels-idx1-ubyte.gz",
+  train_labels = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset/train-labels-idx1-ubyte.gz",
                            "rb")
   data["validation"] = np.asarray(list(zip(train_images[:10000],
                                        np.asarray(train_labels))))
+  print (data["validation"][0][0].shape)
   """data["validation"] is a set of 10,000 tuples (x, y) containing the
   28 x 28 image "x" and the corresponding non-vectorized label "y" """
   data["train"] = np.asarray(list(zip(train_images[10000:],
@@ -157,9 +158,9 @@ def load_data():
   """data["train"] is a set of 50,000 tuples (x, y) containing the
   28 x 28 image "x" and the corresponding 10-D vectorized label "y" """
   
-  test_images = load_file("/Users/ryan/Documents/Coding/neural_networks/digit_classifier/digit_classifier_dataset/t10k-images-idx3-ubyte.gz",
+  test_images = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset/t10k-images-idx3-ubyte.gz",
                           "rb")
-  test_labels = load_file("/Users/ryan/Documents/Coding/neural_networks/digit_classifier/digit_classifier_dataset/t10k-labels-idx1-ubyte.gz",
+  test_labels = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset//t10k-labels-idx1-ubyte.gz",
                           "rb")
   data["test"] = np.asarray(list(zip(test_images,
                                  np.asarray(test_labels))))

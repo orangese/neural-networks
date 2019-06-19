@@ -75,11 +75,12 @@ Progress:
 
 """
 #Libraries
-import sys
-sys.path.insert(0, "/Users/ryan/Documents/Coding/neural_networks")
-import mlp_nn as mlp #vanilla feed-forward neural network
-import mnist_loader
 import numpy as np
+import mnist_loader
+
+import sys
+sys.path.insert(0, "/Users/ryan/Documents/Coding/neural_networks/src")
+import mlp #vanilla feed-forward neural network
 
 #Testing area
 if __name__ == "__main__":
