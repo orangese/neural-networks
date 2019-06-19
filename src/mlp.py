@@ -189,7 +189,7 @@ class Network(object):
     #regular bias initializer
     self.biases = np.array([np.random.randn(layer, 1) for layer in
                             self.layers[1:]])
-
+    
   def feed_forward(self, a):
     #feeds an input into the network and returns its output
     for b, w in zip(self.biases[:-1], self.weights[:-1]):

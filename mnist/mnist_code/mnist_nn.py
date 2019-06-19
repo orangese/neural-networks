@@ -102,6 +102,9 @@ if __name__ == "__main__":
   classifier = mlp.Network(structure, cost_function = cost_function,
                            output_activation = output_activation,
                            weight_init = weight_init)
+  print (classifier.evaluate_cost(
+    [(np.zeros((784, 1)), 0)]
+  ))
   classifier.train(data, learning_rate, minibatch_size, num_epochs,
                    momentum = momentum, dropout = dropout,
                    early_stopping = early_stopping,

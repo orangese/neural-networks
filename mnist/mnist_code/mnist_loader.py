@@ -149,7 +149,6 @@ def load_data():
                            "rb")
   data["validation"] = np.asarray(list(zip(train_images[:10000],
                                        np.asarray(train_labels))))
-  print (data["validation"][0][0].shape)
   """data["validation"] is a set of 10,000 tuples (x, y) containing the
   28 x 28 image "x" and the corresponding non-vectorized label "y" """
   data["train"] = np.asarray(list(zip(train_images[10000:],
