@@ -31,9 +31,6 @@ import numpy as np
 from scipy.signal import convolve
 from functools import reduce
 from time import time
-
-import sys
-sys.path.insert(0, "/Users/ryan/Documents/Coding/neural_networks/src")
 from mlp import Activation, Cost
 
 #Classes
@@ -46,7 +43,7 @@ class Layer(object):
     #dim refers to the dimensions of the output of this layer
 
 class Conv(Layer):
-  #basic convolutional layer, stride is fixed at one
+  #basic 2-D convolutional layer, stride is fixed at one
 
   def __init__(self, kernel_dim, num_fmaps, actv = Activation("sigmoid"),
                padding = False, previous_layer = None, next_layer = None):
@@ -59,7 +56,6 @@ class Conv(Layer):
     self.bias = np.random.randn(1, 1)
     self.weights = np.random.randn(kernel_dim[0], kernel_dim[0]) \
                    / np.sqrt(self.kernel_dim[0])
-    #assumes kernel_dim is 3-D
 
     self.nabla_b = np.zeros((self.num_fmaps, *self.bias.shape))
     self.nabla_w = np.zeros((self.num_fmaps, *self.weights.shape))
@@ -71,7 +67,7 @@ class Conv(Layer):
              "Conv layer must be followed by Pooling layer"
 
   def propagate(self, backprop = False):
-    #propagates through Conv layer, assumes kernel_dim is 3-D
+    #propagates through Conv layer
     mode = "full" if self.padding else "valid"
     zs = np.array([
       convolve(self.weights, self.previous_layer.output, mode = mode)
@@ -104,7 +100,7 @@ class Conv(Layer):
     self.nabla_w = np.zeros((self.num_fmaps, *self.weights.shape))
 
 class Pooling(Layer):
-  #basic pooling layer, for now, only max pooling is available
+  #basic pooling layer, for now, only 2-D max pooling is available
 
   def __init__(self, pool_dim, pool_type = "max", previous_layer = None,
                next_layer = None):
@@ -120,7 +116,6 @@ class Pooling(Layer):
 
   def get_loc_fields(self, a):
     #divides the convolutional output into local fields to prepare for pooling
-    #note: only works for 2-D feature maps (i.e., greyscale)
     return a.reshape(a.shape[0], int(a.shape[1] / 2), int(a.shape[2] / 2),
                      *self.pool_dim)
 
@@ -219,7 +214,7 @@ class Dense(Layer):
 class Network(object):
   #uses Layer classes to create a functional network
 
-  def __init__(self, layers = [], cost = Cost("mse")):
+  def __init__(self, layers = [], cost = Cost("cross-entropy")):
     #initializes Network object
     self.layers = tuple(layers)
     #self.layers is a tuple to prevent manual addition of layers
@@ -293,8 +288,10 @@ class Network(object):
   def print_nablas(self):
     for layer, layer_num in zip(self.layers[1:], np.arange(len(self.layers[1:]))):
       try:
-        print ("Layer {0} nabla_b shape:".format(layer_num + 1), layer.nabla_b.shape)
-        print ("Layer {0} nabla_w shape:".format(layer_num + 1), layer.nabla_w.shape)
+        print ("Layer {0} nabla_b shape:".format(layer_num + 1),
+               layer.nabla_b.shape)
+        print ("Layer {0} nabla_w shape:".format(layer_num + 1),
+               layer.nabla_w.shape)
       except AttributeError:
         print ("Layer {0} has no nablas".format(layer_num + 1))
 
@@ -325,13 +322,14 @@ class Network(object):
     return vector
 
 #Testing area
-def generate_zero_data(data_type = "train"):
-  if data_type == "train":
-    target = np.zeros((10, 1))
-    target[0] = 1.0
-    return [(np.zeros((28, 28)), target) for i in range(10000)]
-  else:
-    return [(np.zeros((28, 28)), 0) for i in range(10000)]
+def generate_zero_data():
+  data = {"train": [], "validation": [], "test": []}
+  target = np.zeros((10, 1))
+  target[0] = 1.0
+  data["train"] = [(np.zeros((28, 28)), target) for i in range(10000)]
+  data["validation"] = [(np.zeros((28, 28)), 0) for i in range(10000)]
+  data["test"] = [(np.zeros((28, 28)), 0) for i in range(10000)]
+  return data
 
 def create_network(net_type = "conv"):
   if net_type == "conv":
@@ -346,13 +344,12 @@ def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
 
   start = time()
 
-  print ("Evaluation without training: {0}%".format(net.eval_acc(
-    generate_zero_data(data_type = "test"))))
+  print ("Evaluation without training: {0}%".format(net.eval_acc(data["test"])))
   
-  net.SGD(data, 5, 0.1, 20, generate_zero_data(data_type = "val"))
+  net.SGD(data["train"], 5, 0.1, 20, data["validation"])
 
-  if test_acc: print ("Accuracy: {0}%".format(net.eval_acc(data)))
-  if test_cost: print ("Cost: {0}".format(net.eval_cost(data)))
+  if test_acc: print ("Accuracy: {0}%".format(net.eval_acc(data["test"])))
+  if test_cost: print ("Cost: {0}".format(net.eval_cost(data["test"])))
   print ("Time elapsed: {0} seconds".format(round(time() - start, 3)))
   
 if __name__ == "__main__":
