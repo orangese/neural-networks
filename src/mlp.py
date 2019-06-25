@@ -350,6 +350,163 @@ class Network(object):
 
     return (nabla_b, nabla_w)
 
+  def unvectorized_SGD(self, training_data, num_epochs, learning_rate,
+                       minibatch_size, validation_data = None, test_data = None,
+                       monitor = False, early_stopping = None,
+                       lr_variation = None, momentum = None, dropout = None):
+    """implements stochastic gradient descent to minimize the cost function.
+    This function relies on the self.backprop function to calculate the
+    gradient of the cost function, which is necessary for the updating of
+    weights and biases"""
+    #unvectorized but faster than vetorzied if using dropout
+    
+    if monitor or early_stopping or lr_variation:
+      evaluation = {"validation accuracy": [], "validation cost": [],
+                    "train accuracy": [], "train cost": []}
+    if early_stopping:
+      stored_biases = self.biases
+      stored_weights = self.weights
+      to_stop = False
+      """format for early_stopping parameter is [GL_type, stop_parameter,
+      aGL_strip_GL_parameter]"""
+
+    if lr_variation:
+      original_lr = learning_rate
+      change_lr = False
+      to_evaluate = []
+      """format for lr_variation parameter is [GL_type, stop_parameter,
+      aGL_strip_GL_parameter, lr_variation_parameter, lr_variation_cutoff]"""
+
+    if momentum:
+      bias_velocities = np.array([np.zeros(b.shape) for b in self.biases])
+      weight_velocities = np.array([np.zeros(w.shape) for w in self.weights])
+    
+    for epoch_num in range(num_epochs):
+      epoch = training_data
+      np.random.shuffle(epoch) #randomly shuffle epoch
+      minibatches = [epoch[i:i + minibatch_size] for i in
+                      range(0, len(epoch), minibatch_size)]
+      
+      for minibatch in minibatches:        
+        nabla_b = np.array([np.zeros(b.shape) for b in self.biases])
+        nabla_w = np.array([np.zeros(w.shape) for w in self.weights])
+
+        for image, label in minibatch:
+          delta_nabla_b, delta_nabla_w = self.backprop(image, label,
+                                                       dropout = dropout)
+
+          if self.cost.regularization == "L1":
+            delta_nabla_w += (self.cost.reg_parameter / len(epoch)
+                                             * np.sign(self.weights))
+          elif self.cost.regularization == "L2":
+            delta_nabla_w += (self.cost.reg_parameter / len(epoch) 
+                                             * self.weights)       
+          nabla_b += delta_nabla_b
+          nabla_w += delta_nabla_w
+
+        if momentum:
+          bias_velocities = (momentum * bias_velocities) \
+                             - ((learning_rate / minibatch_size) * nabla_b)
+          weight_velocities = (momentum * weight_velocities) \
+                               - ((learning_rate / minibatch_size) * nabla_w)
+          self.biases += bias_velocities
+          self.weights += weight_velocities
+        else:
+          self.biases -= (learning_rate / minibatch_size) * nabla_b
+          self.weights -= (learning_rate / minibatch_size) * nabla_w
+      
+      if test_data is None:
+        print ("Epoch {0} completed".format(epoch_num + 1))
+      else:
+        validation_accuracy = self.evaluate_accuracy(validation_data)
+        validation_cost = self.evaluate_cost(validation_data)
+        print ("Epoch {0}: accuracy: {1}% - cost: {2}".format(
+          epoch_num + 1, validation_accuracy, round(float(validation_cost), 4)))
+        if early_stopping or monitor:
+          evaluation["validation accuracy"].append(validation_accuracy)
+        if lr_variation:
+          to_evaluate.append(validation_accuracy)
+        if monitor:
+          evaluation["train accuracy"].append(self.evaluate_accuracy(
+            training_data, is_train = True))
+          evaluation["validation cost"].append(validation_cost)
+          evaluation["train cost"].append(self.evaluate_cost(
+            training_data, is_train = True))
+
+      if early_stopping:
+        to_stop = early_stopping[0](evaluation["validation accuracy"],
+                                    early_stopping[1], early_stopping[2])
+        if to_stop == "stop":
+          print ("End SGD: stop parameter exceeded")
+          self.biases = stored_biases
+          self.weights = stored_weights
+          break
+        elif to_stop == "new":
+          stored_biases = self.biases
+          stored_weights = self.weights
+
+      if lr_variation:
+        change_lr = lr_variation[0](to_evaluate, lr_variation[1],
+                                    lr_variation[2])
+        if change_lr == "stop":
+          learning_rate /= lr_variation[3]
+          to_evaluate = []
+        if original_lr * lr_variation[4] >= learning_rate:
+          print ("End SGD: learning rate parameter exceeded")
+          break
+
+      if dropout:
+        for layer in dropout[0]:
+          self.weights[layer] *= dropout[1][dropout[0].index(layer)]
+
+    if not (test_data is None):
+      print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
+      
+    if monitor or early_stopping:
+      return evaluation
+
+  def unvectorized_backprop(self, image, label, dropout = None):
+    #calculates the gradients of the cost function w.r.t. weights and biases
+    #not vectorized but faster than vectorized if dropout is used
+    weighted_inputs = []
+    a = image
+    activations = [a]
+
+    nabla_b = np.asarray([np.zeros(b.shape) for b in self.biases])
+    nabla_w = np.asarray([np.zeros(w.shape) for w in self.weights])
+
+    #Step 1: forward-propagating the data
+    for b, w in zip(self.biases, self.weights):
+      z = np.dot(w, a) + b
+      weighted_inputs.append(z)
+      a = self.activation.calculate(z)
+      activations.append(a)
+
+    if self.output_activation.name != self.activation.name:
+      activations[-1] = self.output_activation.calculate(weighted_inputs[-1])
+
+    if dropout:
+      dropout_matrix = self.dropout(dropout[0], dropout[1]) 
+      activations = np.array(activations) * dropout_matrix
+    
+    #Step 2: computing the output error
+    error = self.cost.get_error(self.output_activation, activations[-1],
+                                weighted_inputs[-1], label)
+    nabla_b[-1] = error
+    nabla_w[-1] = np.outer(error, activations[-2])
+
+    #Step 3: computing the errors for the rest of the layers
+    l = len(self.layers) - 2
+    while l > 0:
+      error = np.dot(self.weights[l].T, error) * \
+             self.activation.derivative(weighted_inputs[l - 1])
+      #computing the error for layer "l + 1" (index "l")
+      nabla_b[l - 1] = error
+      nabla_w[l - 1] = np.outer(error, activations[l - 1])
+      l -= 1
+
+    return (nabla_b, nabla_w)
+
   def dropout(self, dropout_layers, probabilities):
     #returns a matrix of ones and zeros that is used to perform dropout
     assert len(self.layers) - 1 not in dropout_layers, \

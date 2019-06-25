@@ -95,10 +95,10 @@ def generate_zero_data(data_type = "train"):
 #Testing area
 if __name__ == "__main__":
   data = mnist_loader.load_data()
-  data["train"] = data["train"][:100]
-  data["train"] = generate_zero_data()
-  data["test"] = generate_zero_data("test")
-  data["validation"] = generate_zero_data("val")
+##  data["train"] = data["train"][:100]
+##  data["train"] = generate_zero_data()
+##  data["test"] = generate_zero_data("test")
+##  data["validation"] = generate_zero_data("val")
   structure = [784, 100, 10]
   learning_rate = 0.4
   minibatch_size = 15
