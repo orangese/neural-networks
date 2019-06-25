@@ -24,6 +24,10 @@ Progress:
    propagating 60000 examples (~size of the MNIST dataset) took 30 seconds,
    which is worrisome (compared to ~3.3 seconds in the MLP network).
 
+3. 6/25/19: finished implementing backpropagation and SGD. Most features
+   (regularization, dropout, momentum, etc.) have not been added, but network
+   is complete.
+
 """
 
 #Imports
