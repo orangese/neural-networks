@@ -57,7 +57,7 @@ xxxx     unsigned byte   ??               pixel
 Pixels are organized row-wise. Pixel values are 0 to 255. 
 0 means background (white), 255 means foreground (black). 
 
-Remember, the images are 28 x 28 pixels, with each pixel being represented
+The images are 28 x 28 pixels, with each pixel being represented
 by a number between 0 and 255. There are 70000 images in total, with 60000
 being the training/validation data and 10000 being the testing data.
 
@@ -104,7 +104,7 @@ def vectorize(num):
 def load_file(file, mode):
   #function that loads a specific file (the file must be zipped)
   
-  with gzip.open(file, mode) as raw:
+  with gzip.open(file, "rb") as raw:
     data = raw.read()
     magic_number = to_int(data[:4])
     """the first four items in the file make up the magic number,
@@ -128,8 +128,12 @@ def load_file(file, mode):
       in one image"""
       num_columns = to_int(data[12:16])
       """the next four items give the number of columns in one image"""
-      parsed = normalize(np.frombuffer(data, dtype = np.uint8, offset = 16).
+      if mode == "mlp":
+        parsed = normalize(np.frombuffer(data, dtype = np.uint8, offset = 16).
                          reshape(length, num_rows * num_columns, 1), (0, 255))
+      else:
+        parsed = normalize(np.frombuffer(data, dtype = np.uint8, offset = 16).
+                         reshape(length, num_rows, num_columns), (0, 255))
       """converting the file from byte array to re-shaped numpy array with
        dimensions (length, num_rows * num_columns, 1) in order to prepare it
        for usage in the digit_classifier program."""
@@ -138,15 +142,15 @@ def load_file(file, mode):
 
     return parsed
 
-def load_data():
+def load_data(mode):
   """wrapper function that implements load_file() to parse all of the
   MNIST files and stores the result in a dictionary"""
   data = {"train": [], "validation": [], "test": []}
   
   train_images = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset/train-images-idx3-ubyte.gz",
-                           "rb")
+                           mode = mode)
   train_labels = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset/train-labels-idx1-ubyte.gz",
-                           "rb")
+                           mode = mode)
   data["validation"] = np.asarray(list(zip(train_images[:10000],
                                        np.asarray(train_labels))))
   """data["validation"] is a set of 10,000 tuples (x, y) containing the
@@ -158,9 +162,9 @@ def load_data():
   28 x 28 image "x" and the corresponding 10-D vectorized label "y" """
   
   test_images = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset/t10k-images-idx3-ubyte.gz",
-                          "rb")
+                          mode = mode)
   test_labels = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset//t10k-labels-idx1-ubyte.gz",
-                          "rb")
+                          mode = mode)
   data["test"] = np.asarray(list(zip(test_images,
                                  np.asarray(test_labels))))
 
@@ -182,14 +186,13 @@ def display_image(pixels, label = None):
 
 #Testing area
 if __name__ == "__main__":
-  data = load_data()
+  data = load_data("conv")
   epoch = data["train"]
   #np.random.shuffle(epoch) #randomly shuffle epoch
   minibatches = [epoch[i:i + 16] for i in
                         range(0, len(epoch), 16)]
   for minibatch in minibatches:
     for image, label in minibatch:
-      display_image(image.reshape(28, 28).astype(np.float_),
-                    label = np.argmax(label))
+      display_image(image, label = np.argmax(label))
       break
     break

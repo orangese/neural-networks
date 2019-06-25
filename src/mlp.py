@@ -23,7 +23,6 @@ To-do:
 
 """
 
-
 #Libraries
 import numpy as np #for fast matrix-based computations
 from time import time #for timing stuff
