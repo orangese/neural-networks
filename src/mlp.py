@@ -230,9 +230,9 @@ class Network(object):
     
     for epoch_num in range(num_epochs):
       epoch = training_data
-      np.random.shuffle(epoch) #randomly shuffle epoch
-      minibatches = np.array([epoch[i:i + minibatch_size] for i in
-                      range(0, len(epoch), minibatch_size)])
+      np.random.shuffle(epoch)
+      minibatches = [epoch[i:i + minibatch_size] for i in
+                     range(0, len(epoch), minibatch_size)]
       
       for minibatch in minibatches:
         nabla_b, nabla_w = self.backprop(minibatch, dropout = dropout)
@@ -321,7 +321,6 @@ class Network(object):
       dropout_matrix = self.dropout(dropout[0], dropout[1]) 
       activations = [act * drop
                      for act, drop in zip(activations, dropout_matrix)]
-
 
     nabla_b = np.asarray([np.zeros(b.shape) for b in self.biases])
     nabla_w = np.asarray([np.zeros(w.shape) for w in self.weights])
