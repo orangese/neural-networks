@@ -1,6 +1,6 @@
 """
 
-"mlp_nn.py"
+"mlp.py"
 
 A program that houses a vanilla feed-forward neural network
 
@@ -15,7 +15,7 @@ Learning rate: variable (uses early stopping to determine when to switch)
 Other hyperparameters: chosen by user
 
 To-do:
-1. Add momentum for SGD, DONE
+1. Add momentum for SGD-- DONE
 2. Dropout
 3. *Artificial expansion (write in data loader files)
 4. Better LR variation (simulated annealing?)
@@ -26,7 +26,7 @@ To-do:
 
 #Libraries
 import numpy as np #for fast matrix-based computations
-from timeit import default_timer as timer #for timing stuff
+from time import time #for timing stuff
 
 #Classes
 class Cost(object):
@@ -59,9 +59,9 @@ class Cost(object):
       cost = np.sum(np.log(a[np.argmax(y)]) for (a, y) in pairs) \
              / (-1.0 * len(pairs))
 
-    if self.reg_parameter == "L2":
+    if self.regularization == "L2":
       cost += np.sum(self.weights ** 2.0)
-    elif self.reg_parameter == "L1":
+    elif self.regularization == "L1":
       cost += np.sum(np.absolute(self.weights))
     
     return cost
@@ -397,7 +397,7 @@ class Network(object):
             early_stopping = None, lr_variation = None, monitor = False,
             show = True, write = None):
     #implementation of SGD with backpropagation to calculate gradients
-    start = timer()
+    start = time()
     
     if show:
       print ("Evaluation without training: {0}%\n".format(
@@ -431,10 +431,9 @@ class Network(object):
         filestream.write("weights: " + str(net.weights) + "\nbiases: "+
                    str(net.biases))
 
-    end = timer()
+    end = time()
 
     if show:
       print ("Time elapsed:", round(end - start, 2), "seconds")
     
     return evaluation
-
