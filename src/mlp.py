@@ -46,7 +46,7 @@ class Cost(object):
     elif self.name == "log-likelihood":
       return (y / a)
 
-  def calculate(self, pairs):
+  def calculate(self, pairs, weights = None):
     #accepts a list of tuples (a, y) and returns average cost over that list
     if self.name == "mse":
       cost = np.sum(np.linalg.norm(a - y) ** 2.0 for (a, y) in pairs) \
@@ -59,10 +59,10 @@ class Cost(object):
       cost = np.sum(np.log(a[np.argmax(y)]) for (a, y) in pairs) \
              / (-1.0 * len(pairs))
 
-    if self.regularization == "L2":
-      cost += np.sum(self.weights ** 2.0)
-    elif self.regularization == "L1":
-      cost += np.sum(np.absolute(self.weights))
+##    if self.regularization == "L2":
+##      cost += np.sum(weights ** 2.0)
+##    elif self.regularization == "L1":
+##      cost += np.sum(np.absolute(weights))
     
     return cost
 
@@ -231,36 +231,21 @@ class Network(object):
     for epoch_num in range(num_epochs):
       epoch = training_data
       np.random.shuffle(epoch) #randomly shuffle epoch
-      minibatches = [epoch[i:i + minibatch_size] for i in
-                      range(0, len(epoch), minibatch_size)]
+      minibatches = np.array([epoch[i:i + minibatch_size] for i in
+                      range(0, len(epoch), minibatch_size)])
       
-      for minibatch in minibatches:        
-        nabla_b = np.array([np.zeros(b.shape) for b in self.biases])
-        nabla_w = np.array([np.zeros(w.shape) for w in self.weights])
+      for minibatch in minibatches:
+        nabla_b, nabla_w = self.backprop(minibatch, dropout = dropout)
+
+        if self.cost.regularization == "L1":
+          nabla_w += (self.cost.reg_parameter / len(epoch)
+                                           * np.sign(self.weights))
+        elif self.cost.regularization == "L2":
+          nabla_w += (self.cost.reg_parameter / len(epoch) 
+                                           * self.weights) 
         
-        for image, label in minibatch:
-          delta_nabla_b, delta_nabla_w = self.backprop(image, label,
-                                                       dropout = dropout)
-
-          if self.cost.regularization == "L1":
-            delta_nabla_w += (self.cost.reg_parameter / len(epoch)
-                                             * np.sign(self.weights))
-          elif self.cost.regularization == "L2":
-            delta_nabla_w += (self.cost.reg_parameter / len(epoch) 
-                                             * self.weights)       
-          nabla_b += delta_nabla_b
-          nabla_w += delta_nabla_w
-
-        if momentum:
-          bias_velocities = (momentum * bias_velocities) \
-                             - ((learning_rate / minibatch_size) * nabla_b)
-          weight_velocities = (momentum * weight_velocities) \
-                               - ((learning_rate / minibatch_size) * nabla_w)
-          self.biases += bias_velocities
-          self.weights += weight_velocities
-        else:
-          self.biases -= (learning_rate / minibatch_size) * nabla_b
-          self.weights -= (learning_rate / minibatch_size) * nabla_w
+        self.biases -= (learning_rate / minibatch_size) * nabla_b
+        self.weights -= (learning_rate / minibatch_size) * nabla_w
       
       if test_data is None:
         print ("Epoch {0} completed".format(epoch_num + 1))
@@ -312,18 +297,18 @@ class Network(object):
     if monitor or early_stopping:
       return evaluation
 
-  def backprop(self, image, label, dropout = None):
+  def backprop(self, minibatch, dropout = None):
     #calculates the gradients of the cost function w.r.t. weights and biases
-    weighted_inputs = []
-    a = image
-    activations = [a]
+    a, labels = list(zip(*minibatch))
+    a = np.array(a)
+    labels = np.array(labels)
 
-    nabla_b = np.asarray([np.zeros(b.shape) for b in self.biases])
-    nabla_w = np.asarray([np.zeros(w.shape) for w in self.weights])
+    weighted_inputs = []
+    activations = [a]
 
     #Step 1: forward-propagating the data
     for b, w in zip(self.biases, self.weights):
-      z = np.dot(w, a) + b
+      z = np.dot(w, a).transpose(1, 0, 2) + b
       weighted_inputs.append(z)
       a = self.activation.calculate(z)
       activations.append(a)
@@ -332,24 +317,37 @@ class Network(object):
       activations[-1] = self.output_activation.calculate(weighted_inputs[-1])
 
     if dropout:
+      #implementation is not optimized-- loop is slow
       dropout_matrix = self.dropout(dropout[0], dropout[1]) 
-      activations = np.array(activations) * dropout_matrix
+      activations = [act * drop
+                     for act, drop in zip(activations, dropout_matrix)]
+
+
+    nabla_b = np.asarray([np.zeros(b.shape) for b in self.biases])
+    nabla_w = np.asarray([np.zeros(w.shape) for w in self.weights])
     
     #Step 2: computing the output error
     error = self.cost.get_error(self.output_activation, activations[-1],
-                                weighted_inputs[-1], label)
+                                weighted_inputs[-1], labels)
     nabla_b[-1] = error
-    nabla_w[-1] = np.outer(error, activations[-2])
+    nabla_w[-1] = np.array([np.outer(err, act)
+                            for err, act in zip(error, activations[-2])])
+    #loop is slow
 
     #Step 3: computing the errors for the rest of the layers
     l = len(self.layers) - 2
     while l > 0:
-      error = np.dot(self.weights[l].T, error) * \
+      error = np.dot(self.weights[l].T, error).transpose(1, 0, 2) * \
              self.activation.derivative(weighted_inputs[l - 1])
       #computing the error for layer "l + 1" (index "l")
       nabla_b[l - 1] = error
-      nabla_w[l - 1] = np.outer(error, activations[l - 1])
+      nabla_w[l - 1] = np.array([np.outer(err, act) for err, act
+                                 in zip(error, activations[l-1])])
+      #loop is slow
       l -= 1
+
+    nabla_b = np.array([np.sum(b, axis = 0) for b in nabla_b])
+    nabla_w = np.array([np.sum(w, axis = 0) for w in nabla_w])
 
     return (nabla_b, nabla_w)
 
