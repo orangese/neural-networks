@@ -81,14 +81,28 @@ import mnist_loader
 import sys
 sys.path.insert(0, "/Users/ryan/Documents/Coding/neural_networks/src")
 import mlp #vanilla feed-forward neural network
+sys.path.insert(0, "/Users/ryan/Desktop")
+#import temp as mlp
+
+def generate_zero_data(data_type = "train"):
+  if data_type == "train":
+    target = np.zeros((10, 1))
+    target[0] = 1.0
+    return [(np.zeros((784, 1)), target) for i in range(10000)]
+  else:
+    return [(np.zeros((784, 1)), 0) for i in range(10000)]
 
 #Testing area
 if __name__ == "__main__":
   data = mnist_loader.load_data()
+  data["train"] = data["train"][:100]
+  data["train"] = generate_zero_data()
+  data["test"] = generate_zero_data("test")
+  data["validation"] = generate_zero_data("val")
   structure = [784, 100, 10]
   learning_rate = 0.4
-  minibatch_size = 10
-  num_epochs = 60
+  minibatch_size = 15
+  num_epochs = 5
   momentum = None
   cost_function = mlp.Cost("cross-entropy", regularization = "L2",
                   reg_parameter = 2.0)
@@ -102,9 +116,6 @@ if __name__ == "__main__":
   classifier = mlp.Network(structure, cost_function = cost_function,
                            output_activation = output_activation,
                            weight_init = weight_init)
-  print (classifier.evaluate_cost(
-    [(np.zeros((784, 1)), 0)]
-  ))
   classifier.train(data, learning_rate, minibatch_size, num_epochs,
                    momentum = momentum, dropout = dropout,
                    early_stopping = early_stopping,
