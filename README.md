@@ -14,7 +14,7 @@ A basic feed-forward network. Class-oriented implementation allows for various f
 
 #### Convolutional neural network (`conv_nn.py`):
 
-A basic convolutional neural network. Its structure is different from `mlp.py` in that this neural network is built by stacking layers. This allows for greater versatility-- both a convolutional and a feed-forward network can be created using `conv_nn.py`. Though this program does not have as many features as `mlp.py` (i.e., it is lackign dropout, SGD momentum, learning rate decay, weight decay, etc.), it is still functional.
+A basic convolutional neural network. Its structure is different from `mlp.py` in that this neural network is built by stacking layers. This allows for greater versatility-- both a convolutional and a feed-forward network can be created using `conv_nn.py`. Though this program does not have as many features as `mlp.py` (i.e., it is lacking dropout, SGD momentum, learning rate decay, weight decay, etc.), it is still functional.
 
 ### Projects:
 
