@@ -57,11 +57,6 @@ class Cost(object):
     elif self.name == "log-likelihood":
       cost = np.sum(np.log(a[np.argmax(y)]) for (a, y) in pairs) \
              / (-1.0 * len(pairs))
-
-##    if self.regularization == "L2":
-##      cost += np.sum(weights ** 2.0)
-##    elif self.regularization == "L1":
-##      cost += np.sum(np.absolute(weights))
     
     return cost
 
@@ -533,10 +528,12 @@ class Network(object):
     #returns cost when the network is evaluated using test data
     if is_train:
       return self.cost.calculate([(self.feed_forward(image), label)
-                                  for (image, label) in test_data])
+                                  for (image, label) in test_data],
+                                 weights = self.weights)
     else:
       return self.cost.calculate([(self.feed_forward(
-        image), self.vectorize(label)) for (image, label) in test_data])
+        image), self.vectorize(label)) for (image, label) in test_data],
+                                 weights = self.weights)
 
   def vectorize(self, num):
     #function that vectorizes a scalar (one-hot encoding)
