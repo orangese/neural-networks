@@ -85,7 +85,7 @@ def load_file(file, file_length, num_independent, test_to_train):
   return (data, ranges)
 
 def load_data():
-  file = "/Users/ryan/Documents/Coding/neural_networks/credit_analysis/credit_analysis_dataset/credit_analysis_dataset.txt"
+  file = "/Users/ryan/Documents/Coding/neural-networks/credit-analysis/original/credit-analysis-dataset-original/credit_analysis_dataset_original.txt"
   parsed, ranges = load_file(file, 690, 15, 0.8)
   data = {"train": [], "validation": [], "test": []}
 

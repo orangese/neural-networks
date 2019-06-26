@@ -1,6 +1,6 @@
 """
 
-"digit_classifier_nn.py"
+"mnist_nn.py"
 
 A digit classifying neural network.
 
@@ -79,7 +79,7 @@ import numpy as np
 import mnist_loader
 
 import sys
-sys.path.insert(0, "/Users/ryan/Documents/Coding/neural_networks/src")
+sys.path.insert(0, "/Users/ryan/Documents/Coding/neural-networks/src")
 import mlp #vanilla feed-forward neural network
 import conv_nn #convolutional neural network as well as a MLP network
 
@@ -112,8 +112,8 @@ if __name__ == "__main__":
                      show = True, write = write)
   else:
     data = mnist_loader.load_data("conv")
-    data["train"] = data["train"][:1000]
-    data["test"] = data["test"][:1000]
-    data["validation"] = data["validation"][:1000]
+##    data["train"] = data["train"][:1000]
+##    data["test"] = data["test"][:1000]
+##    data["validation"] = data["validation"][:1000]
     conv_nn.test(data = data, test_acc = True,
                  net_type = input("MLP or ConvNN test? (mlp/conv): "))

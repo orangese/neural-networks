@@ -147,9 +147,9 @@ def load_data(mode):
   MNIST files and stores the result in a dictionary"""
   data = {"train": [], "validation": [], "test": []}
   
-  train_images = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset/train-images-idx3-ubyte.gz",
+  train_images = load_file("/Users/ryan/Documents/Coding/neural-networks/mnist/mnist-dataset/train-images-idx3-ubyte.gz",
                            mode = mode)
-  train_labels = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset/train-labels-idx1-ubyte.gz",
+  train_labels = load_file("/Users/ryan/Documents/Coding/neural-networks/mnist/mnist-dataset/train-labels-idx1-ubyte.gz",
                            mode = mode)
   data["validation"] = np.asarray(list(zip(train_images[:10000],
                                        np.asarray(train_labels))))
@@ -161,9 +161,9 @@ def load_data(mode):
   """data["train"] is a set of 50,000 tuples (x, y) containing the
   28 x 28 image "x" and the corresponding 10-D vectorized label "y" """
   
-  test_images = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset/t10k-images-idx3-ubyte.gz",
+  test_images = load_file("/Users/ryan/Documents/Coding/neural-networks/mnist/mnist-dataset/t10k-images-idx3-ubyte.gz",
                           mode = mode)
-  test_labels = load_file("/Users/ryan/Documents/Coding/neural_networks/mnist/mnist_dataset//t10k-labels-idx1-ubyte.gz",
+  test_labels = load_file("/Users/ryan/Documents/Coding/neural-networks/mnist/mnist-dataset//t10k-labels-idx1-ubyte.gz",
                           mode = mode)
   data["test"] = np.asarray(list(zip(test_images,
                                  np.asarray(test_labels))))

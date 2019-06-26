@@ -9,7 +9,9 @@ neural network.
 """
 
 #Libraries
-import digit_classifier_nn as net #for getting the results of the digit classifier
+import sys
+sys.path.insert(0, "/Users/ryan/Documents/Coding/neural-networks/src")
+import mlp as net #for getting the results of the digit classifier
 import matplotlib.pyplot as plt #for displaying results
 import numpy as np #for arrays
 

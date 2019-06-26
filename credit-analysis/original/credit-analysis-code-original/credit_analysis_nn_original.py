@@ -11,7 +11,9 @@ Author: Ryan Park
 """
 
 #Libraries
-import credit_analysis_loader
+import sys
+sys.path.insert(0, "/Users/ryan/Documents/Coding/neural-networks/credit-analysis/original/credit-analysis-code-original")
+import credit_analysis_loader_original as c
 import numpy as np
 
 #Classes
@@ -352,29 +354,26 @@ def main2(data):
   
 
 if __name__ == "__main__":
-  import sys
-  sys.path.insert(0, "/Users/ryan/Documents/Coding/neural_networks")
-  import credit_analysis_loader as c
   data = c.load_data()
 
-  import mlp_nn as mlp
-  structure = [15, 20, 20, 1]
-  learning_rate = 2.0
-  minibatch_size = 10
-  num_epochs = 10
-  cost = mlp.Cost("cross-entropy", regularization = "L2", reg_parameter = 5.0)
-  output_activation = mlp.Activation("sigmoid")
-  large_weight_initialization = False
-  write = None
-  lr_variation = ["average_improvement", 0.1, 10, 2, 0.002]
-  early_stopping = None
-  
-  net, n = mlp.main(data, structure, learning_rate, minibatch_size, num_epochs,
-           cost_function = cost,output_activation = output_activation,
-           large_weight_initialization = large_weight_initialization,
-           early_stopping = early_stopping, lr_variation = lr_variation,
-           monitor = False, show = True, write = write)
-  print (net.feed_forward(data["test"][0][0]), data["train"][0][1])
-  print (net.feed_forward(data["validation"][0][0]), data["validation"][0][1])
-  print (net.evaluate_accuracy(data["validation"]))
-  
+##  import mlp as mlp
+##  structure = [15, 20, 20, 1]
+##  learning_rate = 2.0
+##  minibatch_size = 10
+##  num_epochs = 10
+##  cost = mlp.Cost("cross-entropy", regularization = "L2", reg_parameter = 5.0)
+##  output_activation = mlp.Activation("sigmoid")
+##  large_weight_initialization = False
+##  write = None
+##  lr_variation = ["average_improvement", 0.1, 10, 2, 0.002]
+##  early_stopping = None
+##  
+##  net, n = mlp.main(data, structure, learning_rate, minibatch_size, num_epochs,
+##           cost_function = cost,output_activation = output_activation,
+##           large_weight_initialization = large_weight_initialization,
+##           early_stopping = early_stopping, lr_variation = lr_variation,
+##           monitor = False, show = True, write = write)
+##  print (net.feed_forward(data["test"][0][0]), data["train"][0][1])
+##  print (net.feed_forward(data["validation"][0][0]), data["validation"][0][1])
+##  print (net.evaluate_accuracy(data["validation"]))
+##  

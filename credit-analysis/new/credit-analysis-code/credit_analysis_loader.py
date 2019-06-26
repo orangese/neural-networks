@@ -154,7 +154,7 @@ def parse_inputs(inputs_, cols):
 def load_data(ratio, keras_ = True):
   #data processer (essentially a wrapper for "load_file()")
   inputs, labels, cols = load_file(
-    "/Users/ryan/Documents/Coding/neural_networks/credit_analysis/new/credit_analysis_dataset/credit_analysis_dataset.xlsx")
+    "/Users/ryan/Documents/Coding/neural-networks/credit-analysis/new/credit-analysis-dataset/credit_analysis_dataset.xlsx")
   
   if not keras_:
     big_data = np.array(list(zip(inputs, labels)))
@@ -182,7 +182,7 @@ def load_old(ratio, keras_ = True):
   #loads the processed data from the previous dataset (hopefully not used!)
   inputs = []
   labels = []
-  with open("/Users/ryan/Documents/Coding/neural_networks/credit_analysis/credit_analysis_results/credit_analysis_processed_data.txt",
+  with open("/Users/ryan/Documents/Coding/neural-networks/credit-analysis/original/credit-analysis-results-original/credit_analysis_processed_data_original.txt",
             "r") as filestream:
     counter = 1
     temp = []

@@ -4,7 +4,7 @@
 "conv_nn.py"
 
 A program that houses code for a convolutional neural network. It is not
-optimized-- this program is purely for learning purposes. Also note that
+very efficient-- this program is purely for learning purposes. Also note that
 the structure of this file is much different than "mlp.py" in that the
 layers are organized into their own classes.
 
@@ -24,12 +24,28 @@ Progress:
    propagating 60000 examples (~size of the MNIST dataset) took 30 seconds,
    which is worrisome (compared to ~3.3 seconds in the MLP network).
 
-3. 6/25/19: finished implementing backpropagation and SGD. Most features
-   (regularization, dropout, momentum, etc.) have not been added, but network
-   is complete. *update: not true-- something's wrong with convolutional
-   backprop (dense layer is fine, pooling layer ??)
+3. 6/25/19: implemented backpropagation and SGD. However, training is unstable
+   and inaccurate (accuracy with 1,000 MNIST images is 40%-70%), suggesting that
+   there is an error with backpropagation/forward-propagation somewhere in
+   the network. An MLP compiled with this program performs as well as an MLP
+   created with "mlp.py", suggesting that there error lies in the
+   convolutional and/or pooling layers.
 
-4. 6/26/19: fixed backprop in convolutional layer.
+   Structure: Layer((28, 28)), Conv((5, 5), 3), Pooling((2, 2)), Dense(10)
+   Learning rate: 0.4
+   Minibatch size: 20
+
+4. 6/26/19: fixed backpropagation and pooling in convolutional layer. On 1,000
+   train images, the network reaches ~81% accuracy, slightly higher than the
+   MLP's highest accuracy on the same training set (~80%). The convolutional
+   network takes about 10 times longer to train but also yields greater accuracy
+   in fewer epochs. Note that I am not interested in optimizing this network
+   (i.e., trying to make it super-accurate)-- the building of this program
+   was purely for educational purposes, not to produce a powerful network.
+
+   Structure: Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)), Dense(10)
+   Learning rate: 0.4
+   Minibatch size: 20
 
 """
 
@@ -345,7 +361,7 @@ def generate_zero_data():
 
 def create_network(net_type = "conv"):
   if net_type == "conv":
-    net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
+    net = Network([Layer((28, 28)), Conv((5, 5), 5), Pooling((2, 2)),
                    Dense(10)])
   elif net_type == "mlp":
     net = Network([Layer((28, 28)), Dense(100), Dense(10)])
