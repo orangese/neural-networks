@@ -51,9 +51,9 @@ class Cost(object):
       cost = np.sum(np.linalg.norm(a - y) ** 2.0 for (a, y) in pairs) \
              / (2.0 * len(pairs))
     elif self.name == "cross-entropy":
-      cost = np.sum(np.sum(np.nan_to_num(-y * np.log(a) - (1.0 - y) * \
-                                         np.log(1.0 - a)
-                 for (a, y) in pairs))) / len(pairs)
+      cost = np.sum(
+        np.sum(np.nan_to_num(-y * np.log(a) - (1.0 - y) * np.log(1.0 - a))
+               for (a, y) in pairs)) / len(pairs)
     elif self.name == "log-likelihood":
       cost = np.sum(np.log(a[np.argmax(y)]) for (a, y) in pairs) \
              / (-1.0 * len(pairs))
