@@ -304,24 +304,10 @@ class Network(object):
       for minibatch in minibatches:
         for image, label in minibatch:
           self.backprop(image, label)
-          self.param_update(lr, len(minibatch))
+          self.param_update(lr, minibatch_size)
       if not (val_data is None):
         print ("Epoch {0}: accuracy: {1}% - cost: {2}".format(
           epoch_num + 1, self.eval_acc(val_data), self.eval_cost(val_data)))
-
-  def print_err(self):
-    for layer, layer_num in zip(self.layers[1:], np.arange(len(self.layers[1:]))):
-      print ("Layer {0} error shape:".format(layer_num + 1), layer.error.shape)
-
-  def print_nablas(self):
-    for layer, layer_num in zip(self.layers[1:], np.arange(len(self.layers[1:]))):
-      try:
-        print ("Layer {0} nabla_b shape:".format(layer_num + 1),
-               layer.nabla_b.shape)
-        print ("Layer {0} nabla_w shape:".format(layer_num + 1),
-               layer.nabla_w.shape)
-      except AttributeError:
-        print ("Layer {0} has no nablas".format(layer_num + 1))
 
   def eval_acc(self, test_data, is_train = False):
     #returns percent correct when the network is evaluated using test data
@@ -359,17 +345,14 @@ def generate_zero_data():
   data["test"] = [(np.ones((28, 28)), 0) for i in range(1000)]
   return data
 
-def create_network(net_type = "conv"):
+def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
+  if data is None: data = generate_zero_data()
+  
   if net_type == "conv":
     net = Network([Layer((28, 28)), Conv((5, 5), 5), Pooling((2, 2)),
                    Dense(10)])
   elif net_type == "mlp":
     net = Network([Layer((28, 28)), Dense(100), Dense(10)])
-  return net
-
-def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
-  if data is None: data = generate_zero_data()
-  net = create_network(net_type = net_type)
 
   start = time()
 

@@ -93,14 +93,14 @@ if __name__ == "__main__":
     minibatch_size = 20
     num_epochs = 5
     momentum = None
-    cost_function = mlp.Cost("cross-entropy")#, regularization = "L2",
-#                    reg_parameter = 2.0)
+    cost_function = mlp.Cost("cross-entropy", regularization = "L2",
+                    reg_parameter = 2.0)
     output_activation = mlp.Activation("sigmoid")
     weight_init = "regular"
     write = None
     lr_variation = None
     early_stopping = None
-    dropout = None#[[1], [0.5]]
+    dropout = None
 
     classifier = mlp.Network(structure, cost_function = cost_function,
                              output_activation = output_activation,
