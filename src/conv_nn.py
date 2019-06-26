@@ -26,7 +26,10 @@ Progress:
 
 3. 6/25/19: finished implementing backpropagation and SGD. Most features
    (regularization, dropout, momentum, etc.) have not been added, but network
-   is complete.
+   is complete. *update: not true-- something's wrong with convolutional
+   backprop (dense layer is fine, pooling layer ??)
+
+4. 6/26/19: fixed backprop in convolutional layer.
 
 """
 
@@ -57,12 +60,11 @@ class Conv(Layer):
     self.actv = actv
     self.padding = padding
     
-    self.bias = np.random.randn(1, 1)
-    self.weights = np.random.randn(kernel_dim[0], kernel_dim[0]) \
-                   / np.sqrt(self.kernel_dim[0])
+    self.biases = np.random.randn(self.num_fmaps, 1, 1)
+    self.weights = np.random.randn(self.num_fmaps, *self.kernel_dim)
 
-    self.nabla_b = np.zeros((self.num_fmaps, *self.bias.shape))
-    self.nabla_w = np.zeros((self.num_fmaps, *self.weights.shape))
+    self.nabla_b = np.zeros(self.biases.shape)
+    self.nabla_w = np.zeros(self.weights.shape)
 
     self.previous_layer = previous_layer
     self.next_layer = next_layer
@@ -74,8 +76,8 @@ class Conv(Layer):
     #propagates through Conv layer
     mode = "full" if self.padding else "valid"
     zs = np.array([
-      convolve(self.weights, self.previous_layer.output, mode = mode)
-      + self.bias for fmap in range(self.num_fmaps)])
+      convolve(self.weights[fmap_num], self.previous_layer.output, mode = mode)
+      + self.biases[fmap_num] for fmap_num in range(self.num_fmaps)])
     self.output = self.actv.calculate(zs)
     self.dim = self.output.shape
     if backprop: self.zs = zs
@@ -83,25 +85,33 @@ class Conv(Layer):
 
   def backprop(self):
     #backpropagation through Conv layer, forward pass assumed
-    self.error = np.empty(self.dim)
-    for fmap, fmap_num in zip(self.output,
-                              np.arange(len(self.output))):
-      temp = np.zeros(fmap.reshape(*fmap.shape[:2], -1).shape)
-      np.put(temp, self.next_layer.max_args[fmap_num],
-             self.next_layer.error[fmap_num])
-      self.error[fmap_num] = temp.reshape(fmap.shape)
+    self.error = np.zeros(self.dim)
+    if isinstance(self.next_layer, Pooling):
+      self.error = self.next_layer.get_loc_fields(self.error)
+      next_error = np.expand_dims(self.next_layer.error, axis = 3)
+      np.put_along_axis(self.error, self.next_layer.max_args, next_error,
+                        axis = 3)
+      self.error.resize(*self.dim)
+    else:
+      actv_deriv = self.actv.derivative(self.zs)
+      for fmap, fmap_num in zip(self.output, np.arange(len(self.output))):
+        self.error[fmap_num] = np.squeeze(
+        np.dot(self.next_layer.weights[fmap_num].T, self.next_layer.error)) * \
+        actv_deriv[fmap_num]
 
-    self.nabla_b += np.sum(self.error, axis = (1, 2)).reshape(self.num_fmaps, 1, 1)
-    self.nabla_w += sum(convolve(self.previous_layer.output, self.error[fmap],
-                                 mode = "valid") for fmap in range(self.num_fmaps))
+    self.nabla_b += np.sum(self.error, axis = (1, 2)).reshape(
+      self.num_fmaps, 1, 1)
+    self.nabla_w += np.array([
+      convolve(self.previous_layer.output, self.error[fmap], mode = "valid")
+      for fmap in range(self.num_fmaps)])
 
   def param_update(self, lr, minibatch_size):
     #weight and bias update, backprop assumed
-    self.bias -= (lr / minibatch_size) * np.sum(self.nabla_b)
-    self.weights -= (lr / minibatch_size) * np.sum(self.nabla_w)
+    self.biases -= (lr / minibatch_size) * self.nabla_b
+    self.weights -= (lr / minibatch_size) * self.nabla_w
     
-    self.nabla_b = np.zeros((self.num_fmaps, *self.bias.shape))
-    self.nabla_w = np.zeros((self.num_fmaps, *self.weights.shape))
+    self.nabla_b = np.zeros(self.biases.shape)
+    self.nabla_w = np.zeros(self.weights.shape)
 
 class Pooling(Layer):
   #basic pooling layer, for now, only 2-D max pooling is available
@@ -120,15 +130,15 @@ class Pooling(Layer):
 
   def get_loc_fields(self, a):
     #divides the convolutional output into local fields to prepare for pooling
-    return a.reshape(a.shape[0], int(a.shape[1] / 2), int(a.shape[2] / 2),
-                     *self.pool_dim)
+    loc_fields = a.reshape(a.shape[0], int(a.shape[1] / self.pool_dim[0]),
+                           int(a.shape[2] / self.pool_dim[1]), *self.pool_dim)
+    return loc_fields.reshape(*loc_fields.shape[:3], -1)
 
   def pool(self, fmaps, backprop = False):
     #given a 2-D feature map, this function pools it using max pooling
-    fmaps = fmaps.reshape(*fmaps.shape[:3], -1)
-    axis = fmaps.shape[-1] - 1
-    if backprop: self.max_args = np.argmax(fmaps, axis = axis)
-    maxes = np.max(fmaps, axis = axis)
+    if backprop: self.max_args = np.expand_dims(np.argmax(fmaps, axis = 3),
+                                               axis = 3)
+    maxes = np.max(fmaps, axis = 3)
     return maxes
 
   def propagate(self, backprop = False):
@@ -142,14 +152,13 @@ class Pooling(Layer):
     #backpropagation through Pooling layer, forward pass assumed
     self.error = np.empty(self.dim)
     for fmap, fmap_num in zip(self.previous_layer.output,
-                              np.arange(len(self.previous_layer.output))):
+                              np.arange(self.previous_layer.num_fmaps)):
       #remember that the activation of the pooling layer is linear w.r.t
       #the max activations in the local pool, so the derivative of the
       #activation function is a constant (in this case, 1)
       self.error[fmap_num] = np.dot(self.next_layer.weights[fmap_num].T,
                                     self.next_layer.error.flatten())
-    self.error = np.array(self.error)
-    #Pooling layer has no weights or biases to train
+    #Pooling layer has no weights or biases to train, so no nablas
 
 class Dense(Layer):
   #basic dense layer with multiple activation and cost functions
@@ -172,7 +181,7 @@ class Dense(Layer):
     self.biases = np.random.randn(self.num_neurons, 1)
     self.r_weights_shape = (self.num_neurons, reduce(
       lambda a, b : a * b, self.previous_layer.dim))
-    if isinstance(self.previous_layer, Pooling):
+    if not isinstance(self.previous_layer, Dense):
       self.weights = np.random.randn(self.previous_layer.dim[0], self.num_neurons,
                                      *self.previous_layer.dim[1:])
     else:
@@ -180,7 +189,6 @@ class Dense(Layer):
     self.weights /= np.sqrt(self.r_weights_shape[1])
     #the reduce function flattens the previous layers's output so that
     #computation is easier (especially with pooling layers)
-    #doesn't assume 3-D!
 
     self.nabla_w = np.zeros(self.weights.shape)
     self.nabla_b = np.zeros(self.biases.shape)
@@ -202,7 +210,7 @@ class Dense(Layer):
       self.error = self.cost.get_error(self.actv, self.output, self.zs, label) 
     else:
       self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * \
-                   self.actv.derivative(self.zs)
+          self.actv.derivative(self.zs)
     self.nabla_b += self.error
     self.nabla_w += np.outer(self.error, self.previous_layer.output).reshape(
       self.weights.shape) 
@@ -330,14 +338,15 @@ def generate_zero_data():
   data = {"train": [], "validation": [], "test": []}
   target = np.zeros((10, 1))
   target[0] = 1.0
-  data["train"] = [(np.zeros((28, 28)), target) for i in range(10000)]
-  data["validation"] = [(np.zeros((28, 28)), 0) for i in range(10000)]
-  data["test"] = [(np.zeros((28, 28)), 0) for i in range(10000)]
+  data["train"] = [(np.ones((28, 28)), target) for i in range(1000)]
+  data["validation"] = [(np.ones((28, 28)), 0) for i in range(1000)]
+  data["test"] = [(np.ones((28, 28)), 0) for i in range(1000)]
   return data
 
 def create_network(net_type = "conv"):
   if net_type == "conv":
-    net = Network([Layer((28, 28)), Conv((5, 5), 3), Pooling((2, 2)), Dense(10)])
+    net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
+                   Dense(10)])
   elif net_type == "mlp":
     net = Network([Layer((28, 28)), Dense(100), Dense(10)])
   return net
