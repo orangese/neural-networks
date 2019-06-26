@@ -122,7 +122,7 @@ def load_data():
 #Testing area
 if __name__ == "__main__":
   data = load_data()
-  with open("/Users/ryan/Documents/Coding/neural_networks/credit_analysis/credit_analysis_results/credit_analysis_processed_data.txt",
+  with open("/Users/ryan/Documents/Coding/neural-networks/credit-analysis/credit-analysis-results/credit_analysis_processed_data.txt",
             "w") as filestream:
     for key in data.keys():
       for (independents, label) in data[key]:
