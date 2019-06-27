@@ -75,22 +75,29 @@ class Conv(Layer):
     self.num_fmaps = num_fmaps
     self.actv = actv
     self.padding = padding
-    
-    self.biases = np.random.randn(self.num_fmaps, 1, 1)
-    self.weights = np.random.randn(self.num_fmaps, *self.kernel_dim)
-
-    self.nabla_b = np.zeros(self.biases.shape)
-    self.nabla_w = np.zeros(self.weights.shape)
 
     self.previous_layer = previous_layer
     self.next_layer = next_layer
     if self.next_layer:
       assert isinstance(self.next_layer, Pooling), \
              "Conv layer must be followed by Pooling layer"
+      self.param_init()
+
+  def param_init(self):
+    #initializes weights and biases
+    self.biases = np.random.normal(size = (self.num_fmaps, 1, 1))
+    self.weights = np.random.normal(scale = np.sqrt(
+      1.0 / self.num_fmaps * np.prod(self.previous_layer.dim)),
+                                    size = (self.num_fmaps, *self.kernel_dim))
+
+    self.nabla_b = np.zeros(self.biases.shape)
+    self.nabla_w = np.zeros(self.weights.shape)
 
   def propagate(self, backprop = False):
     #propagates through Conv layer
     mode = "full" if self.padding else "valid"
+    try: self.biases
+    except AttributeError: self.param_init()
     zs = np.array([
       convolve(self.weights[fmap_num], self.previous_layer.output, mode = mode)
       + self.biases[fmap_num] for fmap_num in range(self.num_fmaps)])
@@ -194,7 +201,7 @@ class Dense(Layer):
 
   def param_init(self):
     #initializes network parameters and gradients using previous layer output shape
-    self.biases = np.random.randn(self.num_neurons, 1)
+    self.biases = np.random.normal(size = (self.num_neurons, 1))
     self.r_weights_shape = (self.num_neurons, reduce(
       lambda a, b : a * b, self.previous_layer.dim))
     if not isinstance(self.previous_layer, Dense):
@@ -323,10 +330,10 @@ class Network(object):
   def eval_cost(self, test_data, is_train = False):
     #returns cost when the network is evaluated using test data
     if is_train:
-      return round(self.cost.calculate([(self.propagate(img), label)
+      return np.round_(self.cost.calculate([(self.propagate(img), label)
                                   for (img, label) in test_data]), 5)
     else:
-      return round(self.cost.calculate([(self.propagate(
+      return np.round_(self.cost.calculate([(self.propagate(
         img), self.vectorize(label)) for (img, label) in test_data]), 5)
 
   def vectorize(self, num):
@@ -349,16 +356,23 @@ def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
   if data is None: data = generate_zero_data()
   
   if net_type == "conv":
-    net = Network([Layer((28, 28)), Conv((5, 5), 5), Pooling((2, 2)),
-                   Dense(10)])
+    net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)), Dense(100), 
+                   Dense(10, actv = Activation("softmax"))],
+                  cost = Cost("log-likelihood"))
   elif net_type == "mlp":
-    net = Network([Layer((28, 28)), Dense(100), Dense(10)])
+    net = Network([Layer((28, 28)), Dense(100), Dense(10, actv =
+                                                      Activation("softmax"))],
+                  cost = Cost("log-likelihood"))
 
   start = time()
 
   print ("Evaluation without training: {0}%".format(net.eval_acc(data["test"])))
   
-  net.SGD(data["train"], 5, 0.1, 20, data["validation"])
+  net.SGD(data["train"], 5, 0.1, 10, data["validation"])
+
+  for i in range(10):
+    pred = net.propagate(data["test"][i][0])
+    print (np.max(pred), np.argmax(pred) == data["test"][i][1])
 
   if test_acc: print ("Accuracy: {0}%".format(net.eval_acc(data["test"])))
   if test_cost: print ("Cost: {0}".format(net.eval_cost(data["test"])))

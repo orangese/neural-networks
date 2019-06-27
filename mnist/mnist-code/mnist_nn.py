@@ -112,8 +112,8 @@ if __name__ == "__main__":
                      show = True, write = write)
   else:
     data = mnist_loader.load_data("conv")
-##    data["train"] = data["train"][:1000]
-##    data["test"] = data["test"][:1000]
-##    data["validation"] = data["validation"][:1000]
+    data["train"] = data["train"][:1000]
+    data["test"] = data["test"][:1000]
+    data["validation"] = data["validation"][:1000]
     conv_nn.test(data = data, test_acc = True,
                  net_type = input("MLP or ConvNN test? (mlp/conv): "))
