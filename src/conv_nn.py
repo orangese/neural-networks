@@ -360,9 +360,7 @@ def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
                    Dense(10, actv = Activation("softmax"))],
                   cost = Cost("log-likelihood"))
   elif net_type == "mlp":
-    net = Network([Layer((28, 28)), Dense(100), Dense(10, actv =
-                                                      Activation("softmax"))],
-                  cost = Cost("log-likelihood"))
+    net = Network([Layer((28, 28)), Dense(100), Dense(10)])
 
   start = time()
 
