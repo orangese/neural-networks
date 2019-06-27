@@ -179,6 +179,7 @@ class Pooling(Layer):
       #remember that the activation of the pooling layer is linear w.r.t
       #the max activations in the local pool, so the derivative of the
       #activation function is a constant (in this case, 1)
+      #print (self.next_layer.weights[fmap_num].shape)
       self.error[fmap_num] = np.dot(self.next_layer.weights[fmap_num].T,
                                     self.next_layer.error.flatten())
     #Pooling layer has no weights or biases to train, so no nablas
@@ -196,20 +197,28 @@ class Dense(Layer):
     self.previous_layer = previous_layer
     self.next_layer = next_layer
     assert not self.cost or not self.next_layer, \
-           "Dense layer cannot have both a cost attribute and a next_layer attribute"
+           "Dense layer cannot have both a cost attribute and a \
+            next_layer attribute"
+    assert not self.next_layer, "output layer cannot have dropout applied"
     self.dim = (self.num_neurons, 1)
 
   def param_init(self):
-    #initializes network parameters and gradients using previous layer output shape
-    self.biases = np.random.normal(size = (self.num_neurons, 1))
+    #initializes network parameters and gradients using previous layer output
     self.r_weights_shape = (self.num_neurons, reduce(
       lambda a, b : a * b, self.previous_layer.dim))
-    if not isinstance(self.previous_layer, Dense):
-      self.weights = np.random.randn(self.previous_layer.dim[0], self.num_neurons,
-                                     *self.previous_layer.dim[1:])
+    if self.next_layer is None:
+      self.biases = np.zeros((self.num_neurons, 1))
     else:
-      self.weights = np.random.randn(self.num_neurons, self.r_weights_shape[1])
-    self.weights /= np.sqrt(self.r_weights_shape[1])
+      self.biases = np.random.normal(size = (self.num_neurons, 1))
+    if not isinstance(self.previous_layer, Dense):
+      self.weights = np.random.normal(scale = np.sqrt(1.0 / self.num_neurons),
+                                      size = (self.previous_layer.dim[0],
+                                              self.num_neurons,
+                                              *self.previous_layer.dim[1:]))
+    else:
+      self.weights = np.random.normal(scale = np.sqrt(1.0 / self.num_neurons),
+                                     size = (self.num_neurons,
+                                             self.r_weights_shape[1]))
     #the reduce function flattens the previous layers's output so that
     #computation is easier (especially with pooling layers)
 
@@ -238,14 +247,17 @@ class Dense(Layer):
     self.nabla_w += np.outer(self.error, self.previous_layer.output).reshape(
       self.weights.shape) 
 
-  def param_update(self, lr, minibatch_size):
+  def param_update(self, lr, minibatch_size, reg = 0.0):
     #weight and bias update, backprop assumed
+    self.nabla_w += (reg / minibatch_size) * self.weights
+    #L2 regularization
+    
     self.biases -= (lr / minibatch_size) * self.nabla_b
     self.weights -= (lr / minibatch_size) * self.nabla_w
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
-
+  
 class Network(object):
   #uses Layer classes to create a functional network
 
@@ -298,7 +310,8 @@ class Network(object):
 
   def param_update(self, lr, minibatch_size):
     for layer in self.layers[1:]:
-      try: layer.param_update(lr, minibatch_size)
+      try: layer.param_update(lr, minibatch_size, reg = self.cost.reg_parameter)
+      except TypeError: layer.param_update(lr, minibatch_size)
       except AttributeError: continue
 
   def SGD(self, train_data, num_epochs, lr, minibatch_size, val_data = None):
@@ -330,11 +343,11 @@ class Network(object):
   def eval_cost(self, test_data, is_train = False):
     #returns cost when the network is evaluated using test data
     if is_train:
-      return np.round_(self.cost.calculate([(self.propagate(img), label)
-                                  for (img, label) in test_data]), 5)
+      return round(np.asscalar(self.cost.calculate([(self.propagate(img), label)
+                                  for (img, label) in test_data])), 5)
     else:
-      return np.round_(self.cost.calculate([(self.propagate(
-        img), self.vectorize(label)) for (img, label) in test_data]), 5)
+      return round(np.asscalar(self.cost.calculate([(self.propagate(
+        img), self.vectorize(label)) for (img, label) in test_data])), 5)
 
   def vectorize(self, num):
     #function that vectorizes a scalar (one-hot encoding)
@@ -356,9 +369,9 @@ def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
   if data is None: data = generate_zero_data()
   
   if net_type == "conv":
-    net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)), Dense(100), 
-                   Dense(10, actv = Activation("softmax"))],
-                  cost = Cost("log-likelihood"))
+    net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
+                   Dense(100), Dense(10, actv = Activation("softmax"))],
+                  cost = Cost("log-likelihood", reg_parameter = 0.1))
   elif net_type == "mlp":
     net = Network([Layer((28, 28)), Dense(100), Dense(10)])
 
