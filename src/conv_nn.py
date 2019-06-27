@@ -187,12 +187,13 @@ class Pooling(Layer):
 class Dense(Layer):
   #basic dense layer with multiple activation and cost functions
 
-  def __init__(self, num_neurons, actv = Activation("sigmoid"), cost = None,
-               previous_layer = None, next_layer = None):
+  def __init__(self, num_neurons, actv = Activation("sigmoid"), dropout_p = 1.0,
+               cost = None, previous_layer = None, next_layer = None):
     #initializes Dense layer
     self.num_neurons = num_neurons
     self.actv = actv
     self.cost = cost
+    self.dropout_p = dropout_p
     
     self.previous_layer = previous_layer
     self.next_layer = next_layer
@@ -204,12 +205,9 @@ class Dense(Layer):
 
   def param_init(self):
     #initializes network parameters and gradients using previous layer output
-    self.r_weights_shape = (self.num_neurons, reduce(
-      lambda a, b : a * b, self.previous_layer.dim))
-    if self.next_layer is None:
-      self.biases = np.zeros((self.num_neurons, 1))
-    else:
-      self.biases = np.random.normal(size = (self.num_neurons, 1))
+    self.biases = np.random.normal(size = (self.num_neurons, 1))    
+    self.r_weights_shape = (self.num_neurons,
+                            reduce(lambda a, b : a * b, self.previous_layer.dim))
     if not isinstance(self.previous_layer, Dense):
       self.weights = np.random.normal(scale = np.sqrt(1.0 / self.num_neurons),
                                       size = (self.previous_layer.dim[0],
@@ -217,8 +215,7 @@ class Dense(Layer):
                                               *self.previous_layer.dim[1:]))
     else:
       self.weights = np.random.normal(scale = np.sqrt(1.0 / self.num_neurons),
-                                     size = (self.num_neurons,
-                                             self.r_weights_shape[1]))
+                                     size = self.r_weights_shape)
     #the reduce function flattens the previous layers's output so that
     #computation is easier (especially with pooling layers)
 
@@ -233,6 +230,11 @@ class Dense(Layer):
     reduced_weights = self.weights.reshape(self.r_weights_shape)
     zs = np.dot(reduced_weights, self.previous_layer.output.reshape(-1, 1)) \
          + self.biases
+    if self.dropout_p != 1.0:
+      if backprop: zs *= self.dropout()
+      else:
+        try: self.next_layer.weights *= self.dropout_p
+        except AttributeError: pass
     self.output = self.actv.calculate(zs)
     if backprop: self.zs = zs
 
@@ -257,6 +259,9 @@ class Dense(Layer):
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
+
+  def dropout(self):
+    return 1.0 * (np.random.randn(self.num_neurons, 1) < self.dropout_p)
   
 class Network(object):
   #uses Layer classes to create a functional network
@@ -297,8 +302,7 @@ class Network(object):
   def propagate(self, a, backprop = False):
     #propagates input through network (similar to feed-forward)
     self.layers[0].output = a
-    for layer in self.layers[1:]:
-      layer.propagate(backprop = backprop)
+    for layer in self.layers[1:]: layer.propagate(backprop = backprop)
     return self.layers[-1].output
 
   def backprop(self, img, label):
@@ -360,9 +364,9 @@ def generate_zero_data():
   data = {"train": [], "validation": [], "test": []}
   target = np.zeros((10, 1))
   target[0] = 1.0
-  data["train"] = [(np.ones((28, 28)), target) for i in range(1000)]
-  data["validation"] = [(np.ones((28, 28)), 0) for i in range(1000)]
-  data["test"] = [(np.ones((28, 28)), 0) for i in range(1000)]
+  data["train"] = [(np.ones((28, 28)), target) for i in range(10)]
+  data["validation"] = [(np.ones((28, 28)), 0) for i in range(10)]
+  data["test"] = [(np.ones((28, 28)), 0) for i in range(10)]
   return data
 
 def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
@@ -371,7 +375,7 @@ def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
   if net_type == "conv":
     net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
                    Dense(100), Dense(10, actv = Activation("softmax"))],
-                  cost = Cost("log-likelihood", reg_parameter = 0.1))
+                  cost = Cost("log-likelihood", reg_parameter = 0.0))
   elif net_type == "mlp":
     net = Network([Layer((28, 28)), Dense(100), Dense(10)])
 

@@ -87,7 +87,7 @@ import conv_nn #convolutional neural network as well as a MLP network
 if __name__ == "__main__":
   if input("Use \"mlp.py\" or \"conv_nn.py\"? (mlp/conv): ") == "mlp":
     data = mnist_loader.load_data("mlp")
-##    data["train"] = data["train"][:1000]
+    data["train"] = data["train"][:1000]
     structure = [784, 100, 10]
     learning_rate = 0.1
     minibatch_size = 20
@@ -112,8 +112,10 @@ if __name__ == "__main__":
                      show = True, write = write)
   else:
     data = mnist_loader.load_data("conv")
-##    data["train"] = data["train"][:1000]
-##    data["test"] = data["test"][:1000]
-##    data["validation"] = data["validation"][:1000]
-    conv_nn.test(data = data, test_acc = True,
-                 net_type = input("MLP or ConvNN test? (mlp/conv): "))
+    data["train"] = data["train"][:1000]
+    data["test"] = data["test"][:1000]
+    data["validation"] = data["validation"][:1000]
+    net_type = input("MLP or ConvNN test? (mlp/conv): ")
+    for i in range(int(input("Enter number of times to test: "))):
+      conv_nn.test(data = data, test_acc = True, net_type = net_type)
+      print ("\n")
