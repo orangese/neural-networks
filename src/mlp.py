@@ -45,7 +45,7 @@ class Cost(object):
     elif self.name == "log-likelihood":
       return (y / a)
 
-  def calculate(self, pairs, weights = None):
+  def calculate(self, pairs):
     #accepts a list of tuples (a, y) and returns average cost over that list
     if self.name == "mse":
       cost = np.sum(np.linalg.norm(a - y) ** 2.0 for (a, y) in pairs) \
@@ -55,7 +55,7 @@ class Cost(object):
         np.sum(np.nan_to_num(-y * np.log(a) - (1.0 - y) * np.log(1.0 - a))
                for (a, y) in pairs)) / len(pairs)
     elif self.name == "log-likelihood":
-      cost = np.sum(np.log(a[np.argmax(y)]) for (a, y) in pairs) \
+      cost = np.sum(np.nan_to_num(np.log(a[np.argmax(y)]) for (a, y) in pairs)) \
              / (-1.0 * len(pairs))
     
     return cost
@@ -232,10 +232,10 @@ class Network(object):
         nabla_b, nabla_w = self.backprop(minibatch, dropout = dropout)
 
         if self.cost.regularization == "L1":
-          nabla_w += (self.cost.reg_parameter / len(epoch)
+          nabla_w += (self.cost.reg_parameter / minibatch_size
                                            * np.sign(self.weights))
         elif self.cost.regularization == "L2":
-          nabla_w += (self.cost.reg_parameter / len(epoch) 
+          nabla_w += (self.cost.reg_parameter / minibatch_size 
                                            * self.weights) 
         
         self.biases -= (learning_rate / minibatch_size) * nabla_b
@@ -283,7 +283,7 @@ class Network(object):
 
       if dropout:
         for layer in dropout[0]:
-          self.weights[layer] *= dropout[1][dropout[0].index(layer)]
+          self.weights[layer + 1] *= dropout[1][dropout[0].index(layer)]
 
     if not (test_data is None):
       print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
@@ -390,10 +390,10 @@ class Network(object):
                                                        dropout = dropout)
 
           if self.cost.regularization == "L1":
-            delta_nabla_w += (self.cost.reg_parameter / len(epoch)
+            delta_nabla_w += (self.cost.reg_parameter / minibatch_size
                                              * np.sign(self.weights))
           elif self.cost.regularization == "L2":
-            delta_nabla_w += (self.cost.reg_parameter / len(epoch) 
+            delta_nabla_w += (self.cost.reg_parameter / minibatch_size 
                                              * self.weights)       
           nabla_b += delta_nabla_b
           nabla_w += delta_nabla_w
@@ -451,7 +451,7 @@ class Network(object):
 
       if dropout:
         for layer in dropout[0]:
-          self.weights[layer] *= dropout[1][dropout[0].index(layer)]
+          self.weights[layer + 1] *= dropout[1][dropout[0].index(layer)]
 
     if not (test_data is None):
       print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
@@ -528,12 +528,10 @@ class Network(object):
     #returns cost when the network is evaluated using test data
     if is_train:
       return self.cost.calculate([(self.feed_forward(image), label)
-                                  for (image, label) in test_data],
-                                 weights = self.weights)
+                                  for (image, label) in test_data])
     else:
       return self.cost.calculate([(self.feed_forward(
-        image), self.vectorize(label)) for (image, label) in test_data],
-                                 weights = self.weights)
+        image), self.vectorize(label)) for (image, label) in test_data])
 
   def vectorize(self, num):
     #function that vectorizes a scalar (one-hot encoding)
