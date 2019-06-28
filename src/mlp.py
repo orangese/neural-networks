@@ -370,21 +370,21 @@ class Network(object):
       to_evaluate = []
       """format for lr_variation parameter is [GL_type, stop_parameter,
       aGL_strip_GL_parameter, lr_variation_parameter, lr_variation_cutoff]"""
-
-    if momentum:
-      bias_velocities = np.array([np.zeros(b.shape) for b in self.biases])
-      weight_velocities = np.array([np.zeros(w.shape) for w in self.weights])
     
     for epoch_num in range(num_epochs):
       epoch = training_data
       np.random.shuffle(epoch) #randomly shuffle epoch
       minibatches = [epoch[i:i + minibatch_size] for i in
                       range(0, len(epoch), minibatch_size)]
-      
-      for minibatch in minibatches:        
+
+      if momentum:
+        bias_velocities = np.array([np.zeros(b.shape) for b in self.biases])
+        weight_velocities = np.array([np.zeros(w.shape) for w in self.weights])
+
+      for minibatch in minibatches:
         nabla_b = np.array([np.zeros(b.shape) for b in self.biases])
         nabla_w = np.array([np.zeros(w.shape) for w in self.weights])
-
+        
         for image, label in minibatch:
           delta_nabla_b, delta_nabla_w = self.backprop(image, label,
                                                        dropout = dropout)
