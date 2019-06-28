@@ -47,6 +47,17 @@ Progress:
    Learning rate: 0.4
    Minibatch size: 20
 
+5. 6/28/19: network still broken. ~95% accuracy achieved on MNIST after 2 epochs
+   (which took ~1.1 hours per epoch), which is too low, suggesting that there
+   is something wrong with backpropagation. Additionally, small changes to weight
+   initialization cause the network to become a noise machine, and online
+   learning yields greater accuracy/stability than SGD.
+
+   Structure: Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)), Dense(100),
+              Dense(10)
+   Learning rate: 0.4
+   Minibatch size: 10
+
 """
 
 #Imports
@@ -86,8 +97,12 @@ class Conv(Layer):
   def param_init(self):
     #initializes weights and biases
     self.biases = np.random.normal(size = (self.num_fmaps, 1, 1))
+##    n_out = self.num_fmaps * np.prod(self.kernel_dim) / \
+##            np.prod(self.next_layer.pool_dim)
+##    self.weights = np.random.normal(scale = np.sqrt(1.0 / n_out),
+##                                    size = (self.num_fmaps, *self.kernel_dim))
     self.weights = np.random.normal(scale = np.sqrt(
-      1.0 / self.num_fmaps * np.prod(self.previous_layer.dim)),
+      self.num_fmaps / np.prod(self.previous_layer.dim)),
                                     size = (self.num_fmaps, *self.kernel_dim))
 
     self.nabla_b = np.zeros(self.biases.shape)
@@ -168,7 +183,6 @@ class Pooling(Layer):
     #propagates through Pooling layer
     self.output = self.pool(self.get_loc_fields(self.previous_layer.output),
                             backprop = backprop)
-    if backprop: self.zs = self.output
     self.dim = self.output.shape
 
   def backprop(self):
@@ -327,7 +341,7 @@ class Network(object):
       for minibatch in minibatches:
         for image, label in minibatch:
           self.backprop(image, label)
-          self.param_update(lr, minibatch_size)
+        self.param_update(lr, minibatch_size)
       if not (val_data is None):
         print ("Epoch {0}: accuracy: {1}% - cost: {2}".format(
           epoch_num + 1, self.eval_acc(val_data), self.eval_cost(val_data)))
