@@ -112,9 +112,9 @@ if __name__ == "__main__":
                      show = True, write = write)
   else:
     data = mnist_loader.load_data("conv")
-    data["train"] = data["train"][:1000]
-    data["test"] = data["test"][:1000]
-    data["validation"] = data["validation"][:1000]
+##    data["train"] = data["train"][:1000]
+##    data["test"] = data["test"][:1000]
+##    data["validation"] = data["validation"][:1000]
     net_type = input("MLP or ConvNN test? (mlp/conv): ")
     for i in range(int(input("Enter number of times to test: "))):
       conv_nn.test(data = data, test_acc = True, net_type = net_type)
