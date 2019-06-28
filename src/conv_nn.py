@@ -97,13 +97,13 @@ class Conv(Layer):
   def param_init(self):
     #initializes weights and biases
     self.biases = np.random.normal(size = (self.num_fmaps, 1, 1))
-##    n_out = self.num_fmaps * np.prod(self.kernel_dim) / \
-##            np.prod(self.next_layer.pool_dim)
-##    self.weights = np.random.normal(scale = np.sqrt(1.0 / n_out),
-##                                    size = (self.num_fmaps, *self.kernel_dim))
-    self.weights = np.random.normal(scale = np.sqrt(
-      self.num_fmaps / np.prod(self.previous_layer.dim)),
+    n_out = self.num_fmaps * np.prod(self.kernel_dim) / \
+            np.prod(self.next_layer.pool_dim)
+    self.weights = np.random.normal(loc = 0, scale = np.sqrt(1.0 / n_out),
                                     size = (self.num_fmaps, *self.kernel_dim))
+##    self.weights = np.random.normal(scale = np.sqrt(
+##      self.num_fmaps / np.prod(self.previous_layer.dim)),
+##                                    size = (self.num_fmaps, *self.kernel_dim))
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
@@ -138,9 +138,9 @@ class Conv(Layer):
         actv_deriv[fmap_num]
         
     self.nabla_b += np.sum(self.error, axis = (1, 2)).reshape(*self.biases.shape)
-    rot_err = np.rot90(self.error, k = 2)
     self.nabla_w += np.array([
-      convolve(self.previous_layer.output, rot_err[fmap], mode = "valid")
+      convolve(self.previous_layer.output, np.rot90(self.error[fmap], 2),
+               mode = "valid")
       for fmap in range(self.num_fmaps)])
 
   def param_update(self, lr, minibatch_size):
@@ -174,6 +174,7 @@ class Pooling(Layer):
 
   def pool(self, fmaps, backprop = False):
     #given a 2-D feature map, this function pools it using max pooling
+    fmaps = self.get_loc_fields(fmaps)
     if backprop: self.max_args = np.expand_dims(np.argmax(fmaps, axis = 3),
                                                 axis = 3)
     maxes = np.max(fmaps, axis = 3)
@@ -181,8 +182,7 @@ class Pooling(Layer):
 
   def propagate(self, backprop = False):
     #propagates through Pooling layer
-    self.output = self.pool(self.get_loc_fields(self.previous_layer.output),
-                            backprop = backprop)
+    self.output = self.pool(self.previous_layer.output, backprop = backprop)
     self.dim = self.output.shape
 
   def backprop(self):
@@ -196,7 +196,6 @@ class Pooling(Layer):
       #print (self.next_layer.weights[fmap_num].shape)
       self.error[fmap_num] = np.dot(self.next_layer.weights[fmap_num].T,
                                     self.next_layer.error.flatten())
-    #Pooling layer has no weights or biases to train, so no nablas
 
 class Dense(Layer):
   #basic dense layer with multiple activation and cost functions
@@ -233,8 +232,8 @@ class Dense(Layer):
     #the reduce function flattens the previous layers's output so that
     #computation is easier (especially with pooling layers)
 
-    self.nabla_w = np.zeros(self.weights.shape)
     self.nabla_b = np.zeros(self.biases.shape)
+    self.nabla_w = np.zeros(self.weights.shape)
 
   def propagate(self, backprop = False):
     #propagates through Dense layer
@@ -261,13 +260,13 @@ class Dense(Layer):
           self.actv.derivative(self.zs)
     self.nabla_b += self.error
     self.nabla_w += np.outer(self.error, self.previous_layer.output).reshape(
-      self.weights.shape) 
+      self.weights.shape)
 
   def param_update(self, lr, minibatch_size, reg = 0.0):
     #weight and bias update, backprop assumed
     self.nabla_w += (reg / minibatch_size) * self.weights
     #L2 regularization
-    
+
     self.biases -= (lr / minibatch_size) * self.nabla_b
     self.weights -= (lr / minibatch_size) * self.nabla_w
 
@@ -325,11 +324,11 @@ class Network(object):
     self.layers[-1].backprop(img, label)
     for layer in reversed(self.layers[1:len(self.layers) - 1]): layer.backprop()
 
-  def param_update(self, lr, minibatch_size):
+  def param_update(self, lr, minibatch_size, momentum = 0.0):
     for layer in self.layers[1:]:
       try: layer.param_update(lr, minibatch_size, reg = self.cost.reg_parameter)
       except TypeError: layer.param_update(lr, minibatch_size)
-      except AttributeError: pass
+      except AttributeError: continue
 
   def SGD(self, train_data, num_epochs, lr, minibatch_size, val_data = None):
     #stochastic gradient descent through network
@@ -346,25 +345,17 @@ class Network(object):
         print ("Epoch {0}: accuracy: {1}% - cost: {2}".format(
           epoch_num + 1, self.eval_acc(val_data), self.eval_cost(val_data)))
 
-  def eval_acc(self, test_data, is_train = False):
+  def eval_acc(self, test_data):
     #returns percent correct when the network is evaluated using test data
     test_results = [(np.argmax(self.propagate(img)), label)
                     for (img, label) in test_data]
-    if is_train:
-      return round((sum(int(img == np.argmax(label)) for (img, label) in
-                 test_results) / len(test_data) * 100.0), 2)
-    else:
-      return round((sum(int(img == label) for (img, label) in test_results) \
-             / len(test_data) * 100.0), 2)
+    return round(sum(int(img == label) for (img, label) in test_results) \
+                  / len(test_data) * 100.0, 2)
 
   def eval_cost(self, test_data, is_train = False):
     #returns cost when the network is evaluated using test data
-    if is_train:
-      return round(np.asscalar(self.cost.calculate([(self.propagate(img), label)
-                                  for (img, label) in test_data])), 5)
-    else:
-      return round(np.asscalar(self.cost.calculate([(self.propagate(
-        img), self.vectorize(label)) for (img, label) in test_data])), 5)
+    return round(np.asscalar(self.cost.calculate([(self.propagate(
+      img), self.vectorize(label)) for (img, label) in test_data])), 5)
 
   def vectorize(self, num):
     #function that vectorizes a scalar (one-hot encoding)
@@ -387,7 +378,7 @@ def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
   
   if net_type == "conv":
     net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
-                   Dense(100), Dense(10, actv = Activation("softmax"))],
+                   Dense(10, actv = Activation("softmax"))],
                   cost = Cost("log-likelihood", reg_parameter = 0.0))
   elif net_type == "mlp":
     net = Network([Layer((28, 28)), Dense(100), Dense(10)])

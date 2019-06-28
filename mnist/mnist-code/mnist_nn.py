@@ -92,7 +92,7 @@ if __name__ == "__main__":
     learning_rate = 0.1
     minibatch_size = 20
     num_epochs = 5
-    momentum = None
+    momentum = 0.9
     cost_function = mlp.Cost("cross-entropy", regularization = "L2",
                     reg_parameter = 2.0)
     output_activation = mlp.Activation("sigmoid")
@@ -112,9 +112,9 @@ if __name__ == "__main__":
                      show = True, write = write)
   else:
     data = mnist_loader.load_data("conv")
-##    data["train"] = data["train"][:1000]
-##    data["test"] = data["test"][:1000]
-##    data["validation"] = data["validation"][:1000]
+    data["train"] = data["train"][:1000]
+    data["test"] = data["test"][:1000]
+    data["validation"] = data["validation"][:1000]
     net_type = input("MLP or ConvNN test? (mlp/conv): ")
     for i in range(int(input("Enter number of times to test: "))):
       conv_nn.test(data = data, test_acc = True, net_type = net_type)
