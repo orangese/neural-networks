@@ -118,4 +118,3 @@ if __name__ == "__main__":
     net_type = input("MLP or ConvNN test? (mlp/conv): ")
     for i in range(int(input("Enter number of times to test: "))):
       conv_nn.test(data = data, test_acc = True, net_type = net_type)
-      print ("\n")

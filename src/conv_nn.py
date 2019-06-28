@@ -121,11 +121,11 @@ class Conv(Layer):
         self.error[fmap_num] = np.squeeze(
         np.dot(self.next_layer.weights[fmap_num].T, self.next_layer.error)) * \
         actv_deriv[fmap_num]
-
-    self.nabla_b += np.sum(self.error, axis = (1, 2)).reshape(
-      self.num_fmaps, 1, 1)
+        
+    self.nabla_b += np.sum(self.error, axis = (1, 2)).reshape(*self.biases.shape)
+    rot_err = np.rot90(self.error, k = 2)
     self.nabla_w += np.array([
-      convolve(self.previous_layer.output, self.error[fmap], mode = "valid")
+      convolve(self.previous_layer.output, rot_err[fmap], mode = "valid")
       for fmap in range(self.num_fmaps)])
 
   def param_update(self, lr, minibatch_size):
@@ -160,7 +160,7 @@ class Pooling(Layer):
   def pool(self, fmaps, backprop = False):
     #given a 2-D feature map, this function pools it using max pooling
     if backprop: self.max_args = np.expand_dims(np.argmax(fmaps, axis = 3),
-                                               axis = 3)
+                                                axis = 3)
     maxes = np.max(fmaps, axis = 3)
     return maxes
 
@@ -309,14 +309,13 @@ class Network(object):
     #backprop through network by piecing together Layer backprop functions
     self.propagate(img, backprop = True)
     self.layers[-1].backprop(img, label)
-    for layer in reversed(self.layers[1:len(self.layers) - 1]):
-      layer.backprop()
+    for layer in reversed(self.layers[1:len(self.layers) - 1]): layer.backprop()
 
   def param_update(self, lr, minibatch_size):
     for layer in self.layers[1:]:
       try: layer.param_update(lr, minibatch_size, reg = self.cost.reg_parameter)
       except TypeError: layer.param_update(lr, minibatch_size)
-      except AttributeError: continue
+      except AttributeError: pass
 
   def SGD(self, train_data, num_epochs, lr, minibatch_size, val_data = None):
     #stochastic gradient descent through network
