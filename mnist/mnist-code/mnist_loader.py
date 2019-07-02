@@ -102,7 +102,7 @@ def vectorize(num):
   return result
 
 def load_file(file, mode):
-  #function that loads a specific file (the file must be zipped)
+  #function that loads a specific zipped file
   
   with gzip.open(file, "rb") as raw:
     data = raw.read()
@@ -134,9 +134,8 @@ def load_file(file, mode):
       else:
         parsed = normalize(np.frombuffer(data, dtype = np.uint8, offset = 16).
                          reshape(length, num_rows, num_columns), (0, 255))
-      """converting the file from byte array to re-shaped numpy array with
-       dimensions (length, num_rows * num_columns, 1) in order to prepare it
-       for usage in the digit_classifier program."""
+      """converting the file from byte array to reshaped numpy array
+      in order to prepare it for usage in the digit_classifier program"""
     else:
       parsed = -1 #something went wrong
 

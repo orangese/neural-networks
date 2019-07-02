@@ -49,9 +49,9 @@ Progress:
 
 5. 6/28/19: network still broken. ~95% accuracy achieved on MNIST after 2 epochs
    (which took ~1.1 hours per epoch), which is too low, suggesting that there
-   is something wrong with backpropagation. Additionally, small changes to weight
-   initialization cause the network to become a noise machine, and online
-   learning yields greater accuracy/stability than SGD.
+   is something wrong with backpropagation. Additionally, small changes to
+   weight initialization cause the network to become a noise machine, and
+   online learning yields greater accuracy/stability than SGD.
 
    Structure: Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)), Dense(100),
               Dense(10)
@@ -76,6 +76,10 @@ class Layer(object):
     self.dim = dim
     #dim refers to the dimensions of the output of this layer
 
+  def __repr__(self): return self.__str__()
+
+  def __str__(self): return "Layer"
+
 class Conv(Layer):
   #basic 2-D convolutional layer, stride is fixed at one
 
@@ -97,13 +101,15 @@ class Conv(Layer):
   def param_init(self):
     #initializes weights and biases
     self.biases = np.random.normal(size = (self.num_fmaps, 1, 1))
-    n_out = self.num_fmaps * np.prod(self.kernel_dim) / \
-            np.prod(self.next_layer.pool_dim)
-    self.weights = np.random.normal(loc = 0, scale = np.sqrt(1.0 / n_out),
+    if isinstance(self.next_layer, Pooling):
+      n_out = self.num_fmaps * np.prod(self.kernel_dim) \
+              /np.prod(self.next_layer.pool_dim)
+      self.weights = np.random.normal(loc = 0, scale = np.sqrt(1.0 / n_out),
                                     size = (self.num_fmaps, *self.kernel_dim))
-##    self.weights = np.random.normal(scale = np.sqrt(
-##      self.num_fmaps / np.prod(self.previous_layer.dim)),
-##                                    size = (self.num_fmaps, *self.kernel_dim))
+    else:
+      self.weights = np.random.normal(scale = np.sqrt(
+        1.0 / self.num_fmaps * np.prod(self.previous_layer.dim)),
+                                      size = (self.num_fmaps, *self.kernel_dim))
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
@@ -151,6 +157,10 @@ class Conv(Layer):
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
+  def __repr__(self): return self.__str__()
+
+  def __str__(self): return "Conv"
+
 class Pooling(Layer):
   #basic pooling layer, for now, only 2-D max pooling is available
 
@@ -197,6 +207,10 @@ class Pooling(Layer):
       self.error[fmap_num] = np.dot(self.next_layer.weights[fmap_num].T,
                                     self.next_layer.error.flatten())
 
+  def __repr__(self): return self.__str__()
+
+  def __str__(self): return "Pooling"
+
 class Dense(Layer):
   #basic dense layer with multiple activation and cost functions
 
@@ -221,7 +235,8 @@ class Dense(Layer):
     self.biases = np.random.normal(size = (self.num_neurons, 1))    
     self.r_weights_shape = (self.num_neurons,
                             reduce(lambda a, b : a * b, self.previous_layer.dim))
-    if not isinstance(self.previous_layer, Dense):
+    if isinstance(self.previous_layer, Conv) or \
+       isinstance(self.previous_layer, Pooling):
       self.weights = np.random.normal(scale = np.sqrt(1.0 / self.num_neurons),
                                       size = (self.previous_layer.dim[0],
                                               self.num_neurons,
@@ -275,6 +290,10 @@ class Dense(Layer):
 
   def dropout(self):
     return 1.0 * (np.random.randn(self.num_neurons, 1) < self.dropout_p)
+
+  def __repr__(self): return self.__str__()
+
+  def __str__(self): return "Dense"
   
 class Network(object):
   #uses Layer classes to create a functional network
@@ -362,6 +381,10 @@ class Network(object):
     vector = np.zeros(self.layers[-1].dim)
     vector[num] = 1.0
     return vector
+
+  def __repr__(self): return self.__str__()
+
+  def __str__(self): return self.layers
 
 #Testing area
 def generate_zero_data():
