@@ -19,13 +19,10 @@ import numpy as np
 
 #Testing area
 def display(net, show_kernel = True, layer = Conv):
-  """displays output of a layer or kernel weights using plt.imshow"""
+  #displays output of a layer or kernel weights using plt.imshow
   if show_kernel: assert layer is Conv, "can only show kernel for Conv layer"
   disp_layer = next((l for l in net.layers if isinstance(l, layer)), None)
   disp_obj = np.copy(disp_layer.weights if show_kernel else disp_layer.output)
-##  num_fmaps = None if layer is Layer else disp_layer.dim[0]
-##  fig, axes = plt.subplots(*closest_multiples(disp_item.shape[0] if show_kernel
-##                                              else num_fmaps))
   fig, axes = plt.subplots() if layer is Layer \
               else plt.subplots(*closest_multiples(disp_layer.dim[0]))
   fig.canvas.set_window_title("Visualizing convolutional networks")
@@ -36,11 +33,11 @@ def display(net, show_kernel = True, layer = Conv):
       ax.imshow(disp_obj[list(axes.flatten()).index(ax)], cmap = "gray")
   except AttributeError:
     axes.imshow(disp_obj, cmap = "gray")
-  plt.show() 
+  plt.show()
 
 def closest_multiples(n):
-  """returns two multiples of n that are closest together"""
-  if n == 1: return () #engineered to work with plt.subplots: () represents 1 plot
+  #returns two multiples of n that are closest together
+  if n == 1: return (1, 1)
   factors = []
   for i in range(1, n):
     if n % i == 0: factors.append(((i, int(n / i)), (abs(i - int(n / i)))))
@@ -48,9 +45,12 @@ def closest_multiples(n):
 
 if __name__ == "__main__":
   data = load_data("conv")
+  data["train"] = data["train"][:1000]
+  data["validation"] = data["validation"][:1000]
+  data["test"] = data["test"][:1000]
   net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data)
   display(net)
   display(net, show_kernel = False, layer = Layer)
   display(net, show_kernel = False, layer = Conv)
   display(net, show_kernel = False, layer = Pooling)
-  input()
+  input("Press any key to quit: ")
