@@ -76,9 +76,14 @@ class Activation(object):
 
   def calculate(self, z):
     if self.name == "sigmoid":
-      return 1.0 / (1.0 + np.exp(-z))
+      try: return 1.0 / (1.0 + np.exp(-z))
+      except FloatingPointError: print (z[0], z.shape)
     elif self.name == "softmax":
       return np.exp(z) / np.sum(np.exp(z))
+    elif self.name == "tanh":
+      return (np.exp(z) - np.exp(-z)) / (np.exp(z) + np.exp(-z))
+    elif self.name == "relu":
+      return np.maximum(0, z)
 
   def derivative(self, z, j = None, i = None):
     if self.name == "sigmoid":
@@ -91,6 +96,10 @@ class Activation(object):
                            self.calculate(z)[j] * (1.0 - self.calculate(z)[j])
                            for z_k in z])
       return gradient
+    elif self.name == "tanh":
+      return 1.0 - np.power(self.calculate(z), 2)
+    elif self.name == "relu":
+      return 1.0 * (z > 0.0)
 
 class Early_Stop(object):
   #BEST METHOD: average improvement, others are just for demonstration
