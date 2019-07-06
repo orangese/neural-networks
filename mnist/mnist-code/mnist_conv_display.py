@@ -18,9 +18,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 #Testing area
-def display(net, show_kernel = True, layer = Conv):
+def display(net, show_kernel = False, layer = Layer):
   #displays output of a layer or kernel weights using plt.imshow
-  if show_kernel: assert layer is Conv, "can only show kernel for Conv layer"
+  if show_kernel: layer = Conv
   disp_layer = next((l for l in net.layers if isinstance(l, layer)), None)
   disp_obj = np.copy(disp_layer.weights if show_kernel else disp_layer.output)
   fig, axes = plt.subplots() if layer is Layer \
@@ -31,8 +31,10 @@ def display(net, show_kernel = True, layer = Conv):
   try:
     for ax in axes.flatten():
       ax.imshow(disp_obj[list(axes.flatten()).index(ax)], cmap = "gray")
+      ax.axis("off")
   except AttributeError:
     axes.imshow(disp_obj, cmap = "gray")
+    axes.axis("off")
   plt.show()
 
 def closest_multiples(n):
@@ -44,12 +46,13 @@ def closest_multiples(n):
   return factors[np.argmin(list(zip(*factors))[1])][0]
 
 if __name__ == "__main__":
+  np.seterr(all = "raise")
   data = load_data("conv")
   data["train"] = data["train"][:1000]
   data["validation"] = data["validation"][:1000]
   data["test"] = data["test"][:1000]
   net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data)
-  display(net)
+  display(net, show_kernel = True)
   display(net, show_kernel = False, layer = Layer)
   display(net, show_kernel = False, layer = Conv)
   display(net, show_kernel = False, layer = Pooling)
