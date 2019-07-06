@@ -83,11 +83,14 @@ Progress:
 7. 7/4/19: more efficient implementation of backpropagation and forward
    propagation using flattened weights and error vectors.
 
+8. 7/5/19: decreased runtime by a factor of 10 by using convolve2d instead of
+   convolve.
+
 """
 
 #Imports
 import numpy as np
-from scipy.signal import convolve
+from scipy.signal import convolve2d
 from functools import reduce
 from time import time
 from mlp import Activation, Cost
@@ -125,7 +128,7 @@ class Conv(Layer):
     except AttributeError: n_out /= np.prod(self.next_layer.num_neurons)
     self.weights = np.random.normal(loc = 0, scale = np.sqrt(1.0 / n_out),
                                     size = (self.num_fmaps, *self.kernel_dim))
-    
+
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
@@ -133,10 +136,9 @@ class Conv(Layer):
     #propagates through Conv layer, param_init not assumed
     try: self.biases
     except AttributeError: self.param_init()
-    zs = np.array([
-      convolve(self.weights[fmap_num], self.previous_layer.output, mode = "valid")
-      + self.biases[fmap_num] for fmap_num in range(self.num_fmaps)])
-    
+    zs = np.array([convolve2d(self.weights[fmap_num],
+                              self.previous_layer.output, mode = "valid")
+                   for fmap_num in range(self.num_fmaps)]) + self.biases
     self.output = self.actv.calculate(zs)
     self.dim = self.output.shape
     if backprop: self.zs = zs
@@ -144,6 +146,7 @@ class Conv(Layer):
   def backprop(self):
     #backpropagation through Conv layer, forward pass assumed
     if isinstance(self.next_layer, Pooling):
+      #pretty sure the error is in this part
       self.error = self.next_layer.get_loc_fields(np.zeros(self.dim))
       np.put_along_axis(self.error, self.next_layer.max_args,
                         self.next_layer.error.reshape(*self.next_layer.dim, 1),
@@ -152,17 +155,19 @@ class Conv(Layer):
     else:
       self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * \
                    self.actv.derivative(self.zs).reshape(-1, 1)
+      self.error.resize(*self.dim)
       
-    self.nabla_b += np.sum(self.error.reshape(self.num_fmaps, -1))
+    self.nabla_b += np.sum(self.error, axis = (1, 2))[..., np.newaxis,
+                                                      np.newaxis]
     self.nabla_w += np.array([
-      convolve(self.previous_layer.output, err, mode = "valid")
-      for err in self.error.reshape(*self.dim)])
+      convolve2d(self.previous_layer.output, err, mode = "valid")
+      for err in self.error])
 
   def param_update(self, lr, minibatch_size):
     #weight and bias update
     self.biases -= (lr / minibatch_size) * self.nabla_b
     self.weights -= (lr / minibatch_size) * self.nabla_w
-    
+
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
@@ -189,8 +194,8 @@ class Pooling(Layer):
 
   def consolidate(self, a_):
     #consolidates local fields into convolutional output
-    a = np.copy(a_).reshape(*a_.shape[:3], int(a_.shape[3] / 2),
-                            int(a_.shape[3] / 2)).transpose(0, 1, 3, 2, 4)
+    a = a_.reshape(*a_.shape[:3], int(a_.shape[3] / 2),
+                   int(a_.shape[3] / 2)).transpose(0, 1, 3, 2, 4)
     return a.reshape(a.shape[0], a.shape[1] * a.shape[2],
                      a.shape[3] * a.shape[4])
 
@@ -198,10 +203,7 @@ class Pooling(Layer):
     #propagates through Pooling layer
     fmaps = self.get_loc_fields(self.previous_layer.output)
     if backprop:
-      try: print (self.cached == self.max_args)
-      except AttributeError: pass
       self.max_args = np.expand_dims(np.argmax(fmaps, axis = 3), axis = 3)
-      self.cached = self.max_args
     self.output = np.max(fmaps, axis = 3)
     self.dim = self.output.shape
 
@@ -256,16 +258,15 @@ class Dense(Layer):
       self.error = self.cost.get_error(self.actv, self.output, self.zs, label)
     else:
       self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * \
-          self.actv.derivative(self.zs)
-      
+                   self.actv.derivative(self.zs)
+
     self.nabla_b += self.error
     self.nabla_w += np.outer(self.error, self.previous_layer.output)
 
   def param_update(self, lr, minibatch_size, reg = 0.0):
     #weight and bias update, backprop assumed
-    self.nabla_w += (reg / minibatch_size) * self.weights
-    #L2 regularization
-
+    self.nabla_w += (reg / minibatch_size) * self.weights #L2 regularization
+    
     self.biases -= (lr / minibatch_size) * self.nabla_b
     self.weights -= (lr / minibatch_size) * self.nabla_w
 
@@ -316,8 +317,7 @@ class Network(object):
     #backprop through network by piecing together Layer backprop functions
     self.propagate(img, backprop = True)
     self.layers[-1].backprop(img, label)
-    for layer in reversed(self.layers[1:len(self.layers) - 1]):
-      layer.backprop()
+    for layer in reversed(self.layers[1:len(self.layers) - 1]): layer.backprop()
 
   def param_update(self, lr, minibatch_size):
     #network parameter update
@@ -379,7 +379,9 @@ def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
                    Dense(10, actv = Activation("softmax"))],
                   cost = Cost("log-likelihood", reg_parameter = 0.0))
   elif net_type == "mlp":
-    net = Network([Layer((28, 28)), Dense(100), Dense(10)])
+    net = Network([Layer((28, 28)), Dense(100),
+                   Dense(10, actv = Activation("softmax"),
+                         cost = Cost("log-likelihood"))])
 
   start = time()
 
@@ -391,7 +393,11 @@ def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
 
   for i in range(10):
     pred = net.propagate(data["test"][i][0])
-    print (np.max(pred), np.argmax(pred) == data["test"][i][1])
+    if np.argmax(pred) != data["test"][i][1]:
+      print ("Ground truth: index {0} - {1}".format(
+        data["test"][i][1], round(np.asscalar(pred[data["test"][i][1]]), 5)))
+      print ("Max activation: index {0} - {1}".format(
+        np.argmax(pred), np.round(np.max(pred), 5)))
 
   if test_acc: print ("Accuracy: {0}%".format(net.eval_acc(data["test"])))
   if test_cost: print ("Cost: {0}".format(net.eval_cost(data["test"])))
