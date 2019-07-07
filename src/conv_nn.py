@@ -66,17 +66,11 @@ class Conv(Layer):
 
   def backprop(self):
     #backpropagation through Conv layer, forward pass assumed
-    if isinstance(self.next_layer, Pooling):
-      #pretty sure the error is in this part
-      self.error = self.next_layer.get_loc_fields(np.zeros(self.dim))
-      np.put_along_axis(self.error, self.next_layer.max_args,
-                        self.next_layer.error.reshape(*self.next_layer.dim, 1),
-                        axis = 3)
-      self.error = self.next_layer.consolidate(self.error)
-    else:
-      self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * \
-                   self.actv.derivative(self.zs).reshape(-1, 1)
-      self.error.resize(*self.dim)
+    self.error = self.next_layer.get_loc_fields(np.zeros(self.dim))
+    np.put_along_axis(self.error, self.next_layer.max_args,
+                      self.next_layer.error.reshape(*self.next_layer.dim, 1),
+                      axis = 3)
+    self.error = self.next_layer.consolidate(self.error)
 
     self.nabla_b += np.sum(self.error, axis = (1, 2))[..., np.newaxis,
                                                       np.newaxis]
@@ -152,8 +146,6 @@ class Dense(Layer):
                                     size = (self.num_neurons,
                                             reduce(lambda a, b : a * b,
                                                    self.previous_layer.dim)))
-    #the reduce function flattens the previous layers's output so that
-    #computation is easier (especially with pooling layers)
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
