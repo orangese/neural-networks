@@ -68,8 +68,8 @@ def generate_zero_data():
   data["test"] = [(np.ones((28, 28)), 0) for i in range(10000)]
   return data
 
-def test(net_type = "conv", data = None, shorten = False,
-         test_acc = False, test_cost = False):
+def test(net_type = "conv", data = None, shorten = False, test_acc = False,
+         test_cost = False):
   #tests conv_nn.py
   if data is None: data = generate_zero_data()
   if shorten:
@@ -79,8 +79,8 @@ def test(net_type = "conv", data = None, shorten = False,
   
   if net_type == "conv":
     net = Network([Layer((28, 28)), Conv((5, 5), 20, actv = "sigmoid"),
-                   Pooling((2, 2)), Dense(100, actv = "sigmoid", reg = 5.0),
-                   Dense(10, actv = "softmax", reg = 5.0)],
+                   Pooling((2, 2)), Dense(100, actv = "sigmoid", reg = 0.0),
+                   Dense(10, actv = "softmax", reg = 0.0)],
                   cost = "log-likelihood")
   elif net_type == "mlp":
     net = Network([Layer((28, 28)), Dense(100, actv = "relu", reg = 0.0),
@@ -93,7 +93,7 @@ def test(net_type = "conv", data = None, shorten = False,
     print ("Evaluation without training: {0}%".format(
       net.eval_acc(data["test"])))
   
-  net.SGD(data["train"], 50, 0.1, 10, data["validation"])
+  net.SGD(data["train"], 1, 0.1, 10, data["validation"])
 
   for i in range(10):
     pred = net.propagate(data["test"][i][0])
@@ -102,7 +102,7 @@ def test(net_type = "conv", data = None, shorten = False,
         data["test"][i][1], round(np.asscalar(pred[data["test"][i][1]]), 5)))
       print ("Max activation: index {0} - {1}".format(
         np.argmax(pred), np.round(np.max(pred), 5)))
-      display_net(net)
+      #display_net(net)
 
   if test_acc: print ("Accuracy: {0}%".format(net.eval_acc(data["test"])))
   if test_cost: print ("Cost: {0}".format(net.eval_cost(data["test"])))
@@ -113,5 +113,9 @@ def test(net_type = "conv", data = None, shorten = False,
 #Testing area
 if __name__ == "__main__":
   data = load_data("conv")
-  net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data,
-             shorten = True)
+##  net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data,
+##             shorten = True)
+  for i in range(10):
+    net = test(data = data, shorten = False, test_acc = True)
+    print ("\n")
+    
