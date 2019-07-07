@@ -13,7 +13,7 @@ sys.path.insert(0, "/Users/ryan/Documents/Coding/neural-networks/src")
 from conv_nn import Network, Layer, Conv, Pooling, Dense
 sys.path.insert(0, "/Users/ryan/Documents/Coding/neural-networks/\
                  mnist/mnist-code")
-from mnist_loader import load_data, display_image
+from mnist_loader import load_data
 import matplotlib.pyplot as plt
 import numpy as np
 from time import time
@@ -63,9 +63,9 @@ def generate_zero_data():
   data = {"train": [], "validation": [], "test": []}
   target = np.zeros((10, 1))
   target[0] = 1.0
-  data["train"] = [(np.ones((28, 28)), target) for i in range(1000)]
-  data["validation"] = [(np.ones((28, 28)), 0) for i in range(1000)]
-  data["test"] = [(np.ones((28, 28)), 0) for i in range(1000)]
+  data["train"] = [(np.ones((28, 28)), target) for i in range(50000)]
+  data["validation"] = [(np.ones((28, 28)), 0) for i in range(10000)]
+  data["test"] = [(np.ones((28, 28)), 0) for i in range(10000)]
   return data
 
 def test(net_type = "conv", data = None, shorten = False,
@@ -78,15 +78,13 @@ def test(net_type = "conv", data = None, shorten = False,
     data["test"] = data["test"][:1000]
   
   if net_type == "conv":
-    net = Network([Layer((28, 28)),
-                   Conv((5, 5), 20, actv = "sigmoid"),
-                   Pooling((2, 2)),
-##                   Dense(100, actv = "sigmoid"),
-                   Dense(10, actv = "softmax", reg = 0.0)],
+    net = Network([Layer((28, 28)), Conv((5, 5), 20, actv = "sigmoid"),
+                   Pooling((2, 2)), Dense(100, actv = "sigmoid", reg = 5.0),
+                   Dense(10, actv = "softmax", reg = 5.0)],
                   cost = "log-likelihood")
   elif net_type == "mlp":
-    net = Network([Layer((28, 28)), Dense(100, actv = "relu", reg = 5.0),
-                   Dense(10, actv = "softmax", reg = 5.0)],
+    net = Network([Layer((28, 28)), Dense(100, actv = "relu", reg = 0.0),
+                   Dense(10, actv = "softmax", reg = 0.0)],
                   cost = "log-likelihood")
 
   start = time()
@@ -112,8 +110,8 @@ def test(net_type = "conv", data = None, shorten = False,
 
   return net
 
+#Testing area
 if __name__ == "__main__":
-##  np.seterr(all = "raise")
   data = load_data("conv")
   net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data,
              shorten = True)
