@@ -87,14 +87,14 @@ import conv_nn #convolutional neural network as well as a MLP network
 if __name__ == "__main__":
   if input("Use \"mlp.py\" or \"conv_nn.py\"? (mlp/conv): ") == "mlp":
     data = mnist_loader.load_data("mlp")
-    data["train"] = data["train"][:1000]
+##    data["train"] = data["train"][:1000]
     structure = [784, 100, 10]
     learning_rate = 0.1
-    minibatch_size = 20
+    minibatch_size = 10
     num_epochs = 5
-    momentum = 0.9
+    momentum = None
     cost_function = mlp.Cost("cross-entropy", regularization = "L2",
-                    reg_parameter = 2.0)
+                    reg_parameter = 5.0)
     output_activation = mlp.Activation("sigmoid")
     weight_init = "regular"
     write = None

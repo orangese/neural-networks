@@ -76,8 +76,7 @@ class Activation(object):
 
   def calculate(self, z):
     if self.name == "sigmoid":
-      try: return 1.0 / (1.0 + np.exp(-z))
-      except FloatingPointError: print (z[0], z.shape)
+      return 1.0 / (1.0 + np.exp(-z))
     elif self.name == "softmax":
       return np.exp(z) / np.sum(np.exp(z))
     elif self.name == "tanh":
@@ -89,9 +88,8 @@ class Activation(object):
     if self.name == "sigmoid":
       return self.calculate(z) * (1.0 - self.calculate(z))
     elif self.name == "softmax":
-      if j is None or i is None:
-        raise TypeError("arguments 'i' or 'j' not provided") 
-      gradient = np.array([-1.0 * self.calculate(z_k)[j] * 
+      assert i or j, "arguments 'i' or 'j' not provided"
+      gradient = np.array([-1.0 * self.calculate(z_k)[j] *
                            self.calculate(z_k)[i] if j != i else 
                            self.calculate(z)[j] * (1.0 - self.calculate(z)[j])
                            for z_k in z])
@@ -243,10 +241,10 @@ class Network(object):
         nabla_b, nabla_w = self.backprop(minibatch, dropout = dropout)
 
         if self.cost.regularization == "L1":
-          nabla_w += (self.cost.reg_parameter / minibatch_size
+          nabla_w += (self.cost.reg_parameter / len(epoch)
                                            * np.sign(self.weights))
         elif self.cost.regularization == "L2":
-          nabla_w += (self.cost.reg_parameter / minibatch_size 
+          nabla_w += (self.cost.reg_parameter / len(epoch) 
                                            * self.weights) 
         
         self.biases -= (learning_rate / minibatch_size) * nabla_b
@@ -397,14 +395,14 @@ class Network(object):
         nabla_w = np.array([np.zeros(w.shape) for w in self.weights])
         
         for image, label in minibatch:
-          delta_nabla_b, delta_nabla_w = self.backprop(image, label,
+          delta_nabla_b, delta_nabla_w = self.unvectorized_backprop(image, label,
                                                        dropout = dropout)
 
           if self.cost.regularization == "L1":
-            delta_nabla_w += (self.cost.reg_parameter / minibatch_size
+            delta_nabla_w += (self.cost.reg_parameter / len(epoch)
                                              * np.sign(self.weights))
           elif self.cost.regularization == "L2":
-            delta_nabla_w += (self.cost.reg_parameter / minibatch_size 
+            delta_nabla_w += (self.cost.reg_parameter / len(epoch) 
                                              * self.weights)       
           nabla_b += delta_nabla_b
           nabla_w += delta_nabla_w
@@ -577,7 +575,7 @@ class Network(object):
              .format(early_stopping, lr_variation))
       print ("Training in process...")
   
-    evaluation = self.SGD(data["train"], num_epochs, learning_rate,
+    evaluation = self.unvectorized_SGD(data["train"], num_epochs, learning_rate,
                           minibatch_size, momentum = momentum,
                           validation_data = \
                           data["validation"] if show else None,
