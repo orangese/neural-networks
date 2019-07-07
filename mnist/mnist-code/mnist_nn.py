@@ -16,7 +16,8 @@ Accuracy (MLP): 98.20%
  - Number of epochs: 60
 
 Accuracy (convolutional network): []
- - Structure: Conv((5, 5), 20), Pooling((2, 2)), Dense(100), Dense(10)
+ - Structure: Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
+              Dense(100), Dense(10)
  - Activation: relu, softmax in output layer
  - Cost: log-likelihood, L2 regularization with lambda = 0.1
  - Learning rate: 0.1
@@ -188,6 +189,14 @@ Progress for "conv_nn.py":
      hidden layer can achieve accuracy up to ~87.5%-~88.0% on the same training
      set. However, when run for 50 epochs, both the convolutional model and
      the MLP relu model stabilize at ~89% accuracy after around 30-40 epochs.
+   When run with an extra Dense(100) layer after the convolutional layer, the
+   network achieves a peak of 90.8% accuracy with L2 regularization of 5.0 on
+   1,000 train images for 50 epochs. See below for structure of this network:
+
+   Structure: Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
+              Dense(100, reg = 5.0), Dense(10, actv = "softmax", reg = 5.0)
+   Learning rate: 0.1
+   Minibatch size: 10
 
 """
 #Libraries
