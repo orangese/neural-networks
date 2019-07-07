@@ -2,24 +2,7 @@
 
 "mlp.py"
 
-A program that houses a vanilla feed-forward neural network
-
-Type: vanilla neural network (MLP feedforward)
-Activation function(s): sigmoid, softmax
-Architecture: chosen by user
-Cost function(s): MSE, cross-entropy, log-likelihood
-Training: vanilla minibatch SGD and BP
-Early stopping: GL, aGL, minimum aGL, average improvement
-Regularization: L1, L2
-Learning rate: variable (uses early stopping to determine when to switch)
-Other hyperparameters: chosen by user
-
-To-do:
-1. Add momentum for SGD-- DONE
-2. Dropout
-3. *Artificial expansion (write in data loader files)
-4. Better LR variation (simulated annealing?)
-5. Max-norm constraint (using L2 norm, ||w||2 < c)
+A program that houses a vanilla feed-forward neural network.
 
 """
 
