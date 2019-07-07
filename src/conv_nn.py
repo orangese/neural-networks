@@ -92,7 +92,6 @@ Progress:
 import numpy as np
 from scipy.signal import convolve2d
 from functools import reduce
-from time import time
 from mlp import Activation, Cost
 
 #Classes
@@ -101,17 +100,17 @@ class Layer(object):
 
   def __init__(self, dim):
     self.dim = dim
-    self.output = np.random.normal(size = self.dim)
+    self.output = np.zeros(self.dim)
     #dim refers to the dimensions of the output of this layer
 
 class Conv(Layer):
-  #basic 2-D convolutional layer, stride is fixed at one
+  #basic 2-D convolutional layer with stride = 1
 
-  def __init__(self, kernel_dim, num_fmaps, actv = Activation("sigmoid"),
+  def __init__(self, kernel_dim, num_filters, actv = "sigmoid",
                previous_layer = None, next_layer = None):
     self.kernel_dim = kernel_dim
-    self.num_fmaps = num_fmaps
-    self.actv = actv
+    self.num_filters = num_filters
+    self.actv = Activation(actv)
 
     self.previous_layer = previous_layer
     self.next_layer = next_layer
@@ -122,12 +121,12 @@ class Conv(Layer):
 
   def param_init(self):
     #initializes weights, biases, and gradients
-    self.biases = np.random.normal(size = (self.num_fmaps, 1, 1))
-    n_out = self.num_fmaps * np.prod(self.kernel_dim)
+    self.biases = np.random.normal(size = (self.num_filters, 1, 1))
+    n_out = self.num_filters * np.prod(self.kernel_dim)
     try: n_out /= np.prod(self.next_layer.pool_dim)
     except AttributeError: n_out /= np.prod(self.next_layer.num_neurons)
     self.weights = np.random.normal(loc = 0, scale = np.sqrt(1.0 / n_out),
-                                    size = (self.num_fmaps, *self.kernel_dim))
+                                    size = (self.num_filters, *self.kernel_dim))
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
@@ -136,9 +135,9 @@ class Conv(Layer):
     #propagates through Conv layer, param_init not assumed
     try: self.biases
     except AttributeError: self.param_init()
-    zs = np.array([convolve2d(self.weights[fmap_num],
+    zs = np.array([convolve2d(self.weights[filter_num],
                               self.previous_layer.output, mode = "valid")
-                   for fmap_num in range(self.num_fmaps)]) + self.biases
+                   for filter_num in range(self.num_filters)]) + self.biases
     self.output = self.actv.calculate(zs)
     self.dim = self.output.shape
     if backprop: self.zs = zs
@@ -156,7 +155,7 @@ class Conv(Layer):
       self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * \
                    self.actv.derivative(self.zs).reshape(-1, 1)
       self.error.resize(*self.dim)
-      
+
     self.nabla_b += np.sum(self.error, axis = (1, 2))[..., np.newaxis,
                                                       np.newaxis]
     self.nabla_w += np.array([
@@ -174,10 +173,8 @@ class Conv(Layer):
 class Pooling(Layer):
   #basic pooling layer, for now, only 2-D max pooling is available
 
-  def __init__(self, pool_dim, pool_type = "max", previous_layer = None,
-               next_layer = None):
+  def __init__(self, pool_dim, previous_layer = None, next_layer = None):
     self.pool_dim = pool_dim
-    self.pool_type = pool_type
 
     self.previous_layer = previous_layer
     if self.previous_layer:
@@ -216,18 +213,14 @@ class Pooling(Layer):
 class Dense(Layer):
   #basic dense layer with multiple activation and cost functions
 
-  def __init__(self, num_neurons, actv = Activation("sigmoid"), cost = None,
+  def __init__(self, num_neurons, actv = "sigmoid", reg = 0.0,
                previous_layer = None, next_layer = None):
     self.num_neurons = num_neurons
-    self.actv = actv
-    self.cost = cost
+    self.actv = Activation(actv)
+    self.reg = reg
     
     self.previous_layer = previous_layer
     self.next_layer = next_layer
-    assert not self.cost or not self.next_layer, \
-           "Dense layer cannot have both a cost attribute and a \
-            next_layer attribute"
-    assert not self.next_layer, "output layer cannot have dropout applied"
     self.dim = (self.num_neurons, 1)
 
   def param_init(self):
@@ -254,21 +247,20 @@ class Dense(Layer):
 
   def backprop(self, img = None, label = None):
     #backpropagation for Dense layer, forward pass assumed
-    if not (img is None):
-      self.error = self.cost.get_error(self.actv, self.output, self.zs, label)
-    else:
+    try:
       self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * \
                    self.actv.derivative(self.zs)
+    except AttributeError:
+      self.error = self.cost.get_error(self.actv, self.output, self.zs, label)
 
     self.nabla_b += self.error
     self.nabla_w += np.outer(self.error, self.previous_layer.output)
 
-  def param_update(self, lr, minibatch_size, reg = 0.0):
+  def param_update(self, lr, minibatch_size, epoch_len):
     #weight and bias update, backprop assumed
-    self.nabla_w += (reg / minibatch_size) * self.weights #L2 regularization
-    
     self.biases -= (lr / minibatch_size) * self.nabla_b
-    self.weights -= (lr / minibatch_size) * self.nabla_w
+    self.weights = (1.0 - lr * self.reg / epoch_len) * self.weights \
+                   - (lr / minibatch_size) * self.nabla_w
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
@@ -276,7 +268,7 @@ class Dense(Layer):
 class Network(object):
   #uses Layer classes to create a functional network
 
-  def __init__(self, layers = [], cost = Cost("cross-entropy")):
+  def __init__(self, layers = [], cost = "cross-entropy"):
     self.layers = tuple(layers)
     #self.layers is a tuple to prevent manual addition of layers
     assert len(self.layers) == 0 or isinstance(self.layers[0], Layer), \
@@ -286,8 +278,8 @@ class Network(object):
     for next_layer, layer in zip(self.layers[1:], self.layers):
       layer.next_layer = next_layer
     #above loops link all the layers together
-    self.cost = cost
-    if len(self.layers) != 0: self.layers[-1].cost = cost
+    self.cost = Cost(cost)
+    if len(self.layers) != 0: self.layers[-1].cost = self.cost
 
   def add_layer(self, layer, position = None):
     #adds a layer and links it to other layers
@@ -319,10 +311,10 @@ class Network(object):
     self.layers[-1].backprop(img, label)
     for layer in reversed(self.layers[1:len(self.layers) - 1]): layer.backprop()
 
-  def param_update(self, lr, minibatch_size):
+  def param_update(self, lr, minibatch_size, epoch_len):
     #network parameter update
-    for layer in self.layers[1:]:
-      try: layer.param_update(lr, minibatch_size, reg = self.cost.reg_parameter)
+    for layer in reversed(self.layers[1:]):
+      try: layer.param_update(lr, minibatch_size, epoch_len)
       except TypeError: layer.param_update(lr, minibatch_size)
       except AttributeError: continue
 
@@ -336,7 +328,7 @@ class Network(object):
       for minibatch in minibatches:
         for image, label in minibatch:
           self.backprop(image, label)
-        self.param_update(lr, minibatch_size)
+        self.param_update(lr, minibatch_size, len(epoch))
       if not (val_data is None):
         print ("Epoch {0}: accuracy: {1}% - cost: {2}".format(
           epoch_num + 1, self.eval_acc(val_data), self.eval_cost(val_data)))
@@ -358,52 +350,3 @@ class Network(object):
     vector = np.zeros(self.layers[-1].dim)
     vector[num] = 1.0
     return vector
-
-#Testing area
-def generate_zero_data():
-  #generates zero data in the shape of MNIST data
-  data = {"train": [], "validation": [], "test": []}
-  target = np.zeros((10, 1))
-  target[0] = 1.0
-  data["train"] = [(np.ones((28, 28)), target) for i in range(1000)]
-  data["validation"] = [(np.ones((28, 28)), 0) for i in range(1000)]
-  data["test"] = [(np.ones((28, 28)), 0) for i in range(1000)]
-  return data
-
-def test(net_type = "conv", data = None, test_acc = False, test_cost = False):
-  if data is None: data = generate_zero_data()
-  
-  if net_type == "conv":
-    net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
-##                   Dense(100),
-                   Dense(10, actv = Activation("softmax"))],
-                  cost = Cost("log-likelihood", reg_parameter = 0.0))
-  elif net_type == "mlp":
-    net = Network([Layer((28, 28)), Dense(100),
-                   Dense(10, actv = Activation("softmax"),
-                         cost = Cost("log-likelihood"))])
-
-  start = time()
-
-  if test_acc:
-    print ("Evaluation without training: {0}%".format(
-      net.eval_acc(data["test"])))
-  
-  net.SGD(data["train"], 5, 0.1, 10, data["validation"])
-
-  for i in range(10):
-    pred = net.propagate(data["test"][i][0])
-    if np.argmax(pred) != data["test"][i][1]:
-      print ("Ground truth: index {0} - {1}".format(
-        data["test"][i][1], round(np.asscalar(pred[data["test"][i][1]]), 5)))
-      print ("Max activation: index {0} - {1}".format(
-        np.argmax(pred), np.round(np.max(pred), 5)))
-
-  if test_acc: print ("Accuracy: {0}%".format(net.eval_acc(data["test"])))
-  if test_cost: print ("Cost: {0}".format(net.eval_cost(data["test"])))
-  print ("Time elapsed: {0} seconds".format(round(time() - start, 3)))
-
-  return net
-  
-if __name__ == "__main__":
-  test(net_type = input("MLP or ConvNN test? (mlp/conv): "))
