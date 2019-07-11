@@ -59,11 +59,12 @@ class Activation(object):
 
   def calculate(self, z):
     if self.name == "sigmoid":
-      return 1.0 / (1.0 + np.exp(-z))
+      try: return 1.0 / (1.0 + np.exp(-z))
+      except FloatingPointError: print (z); return 0.5
     elif self.name == "softmax":
       return np.exp(z) / np.sum(np.exp(z))
     elif self.name == "tanh":
-      return (np.exp(z) - np.exp(-z)) / (np.exp(z) + np.exp(-z))
+      return np.tanh(z)
     elif self.name == "relu":
       return np.maximum(0, z)
 
