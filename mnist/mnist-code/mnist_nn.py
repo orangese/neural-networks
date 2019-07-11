@@ -198,6 +198,9 @@ Progress for "conv_nn.py":
    Learning rate: 0.1
    Minibatch size: 10
 
+   *93.4% at epoch 26 with relu + L2 regularization of 5.0 + lr of 0.03,
+   see structure above
+
 """
 #Libraries
 import numpy as np
