@@ -21,12 +21,9 @@ class Cost(object):
 
   def derivative(self, a, y):
     #returns ∂Cx/∂a_L
-    if self.name == "mse":
-      return (a - y)
-    elif self.name == "cross-entropy":
-      return ((a - y) / (a * (1 - a)))
-    elif self.name == "log-likelihood":
-      return (y / a)
+    if self.name == "mse": return (a - y)
+    elif self.name == "cross-entropy": return ((a - y) / (a * (1 - a)))
+    elif self.name == "log-likelihood": return (y / a)
 
   def calculate(self, pairs):
     #accepts a list of tuples (a, y) and returns average cost over that list
@@ -58,15 +55,10 @@ class Activation(object):
     self.name = name
 
   def calculate(self, z):
-    if self.name == "sigmoid":
-      try: return 1.0 / (1.0 + np.exp(-z))
-      except FloatingPointError: print (z); return 0.5
-    elif self.name == "softmax":
-      return np.exp(z) / np.sum(np.exp(z))
-    elif self.name == "tanh":
-      return np.tanh(z)
-    elif self.name == "relu":
-      return np.maximum(0, z)
+    if self.name == "sigmoid": return 1.0 / (1.0 + np.exp(-z))
+    elif self.name == "softmax": return np.exp(z) / np.sum(np.exp(z))
+    elif self.name == "tanh": return np.tanh(z)
+    elif self.name == "relu": return np.maximum(0, z)
 
   def derivative(self, z, j = None, i = None):
     if self.name == "sigmoid":

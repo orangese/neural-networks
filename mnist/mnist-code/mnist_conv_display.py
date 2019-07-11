@@ -93,7 +93,7 @@ def test(net_type = "conv", data = None, shorten = False, test_acc = False):
     print ("Evaluation without training: {0}%".format(
       net.eval_acc(data["test"])))
   
-  net.SGD(data["train"], 60, 0.03, 10, data["validation"])
+  net.SGD(data["train"], 60, 0.1, 10, data["validation"])
 
   for i in range(10):
     pred = net.propagate(data["test"][i][0])
@@ -116,4 +116,4 @@ if __name__ == "__main__":
 ##  net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data,
 ##             shorten = False)
   for i in range(10):
-    net = test(net_type = "mlp", data = data, shorten = True)
+    net = test(net_type = "conv", data = data, shorten = True)

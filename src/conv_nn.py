@@ -39,14 +39,12 @@ class Conv(Layer):
     if self.next_layer:
       assert isinstance(self.next_layer, Pooling), \
              "Conv layer must be followed by Pooling layer"
-      self.param_init()
 
   def param_init(self):
     #initializes weights, biases, and gradients
     self.biases = np.random.normal(size = (self.num_filters, 1, 1))
-    n_out = self.num_filters * np.prod(self.kernel_dim)
-    try: n_out /= np.prod(self.next_layer.pool_dim)
-    except AttributeError: n_out /= np.prod(self.next_layer.num_neurons)
+    n_out = self.num_filters * np.prod(self.kernel_dim) / \
+            np.prod(self.next_layer.pool_dim)
     self.weights = np.random.normal(loc = 0, scale = np.sqrt(1.0 / n_out),
                                     size = (self.num_filters, *self.kernel_dim))
 
@@ -129,13 +127,12 @@ class Pooling(Layer):
 class Dense(Layer):
   #basic dense layer with multiple activation and cost functions
 
-  def __init__(self, num_neurons, actv = "sigmoid", reg = 0.0, dropout = 1.0,
+  def __init__(self, num_neurons, actv = "sigmoid", reg = 0.0,
                previous_layer = None, next_layer = None):
     self.num_neurons = num_neurons
     self.actv = Activation(actv)
     self.reg = reg
-    self.dropout = dropout
-    
+
     self.previous_layer = previous_layer
     self.next_layer = next_layer
     self.dim = (self.num_neurons, 1)
@@ -151,25 +148,18 @@ class Dense(Layer):
     if self.actv.name == "softmax":
       self.biases = np.zeros(self.biases.shape)
       self.weights = np.zeros(self.weights.shape)
-      assert self.dropout == 1.0, "output layer cannot have dropout"
-      assert 0.0 < self.dropout <= 1.0, "dropout must be in the range (0, 1]"
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
-    self.mask = self.get_mask()
-
-  def propagate(self, backprop = False, change_mask = False):
+  def propagate(self, backprop = False):
     #propagates through Dense layer, param init not assumed
     try: self.biases
     except AttributeError: self.param_init()
     zs = np.dot(self.weights, self.previous_layer.output.reshape(-1, 1)) \
          + self.biases
-    if backprop:
-      if change_mask and self.dropout != 1.0: self.mask = self.get_mask()
-      self.zs = zs# * (self.mask / self.dropout)
-      self.output = self.actv.calculate(self.zs)# * (self.mask / self.dropout)
-    else: self.output = self.actv.calculate(zs)
+    self.output = self.actv.calculate(zs)
+    if backprop: self.zs = zs
 
   def backprop(self, label = None):
     #backpropagation for Dense layer, forward pass assumed
@@ -184,19 +174,12 @@ class Dense(Layer):
 
   def param_update(self, lr, minibatch_size, epoch_len):
     #weight and bias update, backprop assumed
-    self.nabla_b *= self.mask / self.dropout
-    self.nabla_w *= self.mask / self.dropout
-    
     self.biases -= (lr / minibatch_size) * self.nabla_b
     self.weights = (1.0 - lr * self.reg / epoch_len) * self.weights \
                    - (lr / minibatch_size) * self.nabla_w
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
-
-  def get_mask(self):
-    if self.dropout == 1.0: return 1.0
-    else: return 1.0 * (np.random.uniform(size = self.dim) < self.dropout)
 
 class Network(object):
   #uses Layer classes to create a functional network
@@ -232,18 +215,16 @@ class Network(object):
     elif position: del new_layers[position]
     self.__init__(new_layers)
 
-  def propagate(self, a, backprop = False, change_mask = False):
+  def propagate(self, a, backprop = False):
     #propagates input through network (similar to feed-forward)
     self.layers[0].output = a
-    for layer in self.layers[1:]:
-      try: layer.propagate(backprop = backprop, change_mask = change_mask)
-      except TypeError: layer.propagate(backprop = backprop)
+    for layer in self.layers[1:]: layer.propagate(backprop = backprop)
     return self.layers[-1].output
 
-  def backprop(self, img, label, change_mask = False):
+  def backprop(self, img, label):
     #backprop through network by piecing together Layer backprop functions
-    self.propagate(img, backprop = True, change_mask = change_mask)
-    self.layers[-1].backprop(label = label)
+    self.propagate(img, backprop = True)
+    self.layers[-1].backprop(label)
     for layer in reversed(self.layers[1:len(self.layers) - 1]): layer.backprop()
 
   def param_update(self, lr, minibatch_size, epoch_len):
@@ -262,8 +243,7 @@ class Network(object):
                      range(0, len(epoch), minibatch_size)]
       for minibatch in minibatches:
         for image, label in minibatch:
-          self.backprop(image, label)#, np.array_equal(image, minibatch[0][0]))
-          #change_mask is True at the beginning of each minibatch
+          self.backprop(image, label)
         self.param_update(lr, minibatch_size, len(epoch))
       if not (val_data is None):
         print ("Epoch {0}: accuracy: {1}% - cost: {2}".format(
