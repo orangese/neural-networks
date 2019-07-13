@@ -6,7 +6,7 @@ Contains code, datasets and results for various ANN projects.
 
 ### Neural networks:
 
-These neural networks were written using scipy and numpy and can be found in the `src` folder. They are not optimized or efficient and are instead intended for educational purposes.
+These neural networks were written using `scipy` and `numpy` and can be found in the `src` folder. They are not optimized or efficient and are instead intended for educational purposes.
 
 #### Multilayer perceptron (`mlp.py`): 
 
@@ -22,7 +22,7 @@ Application of neural networks to various problems.
 
 #### MNIST (`mnist`):
 
-MLPs and ConvNNs applied to the classic "Hello World" of machine learning problems-- digit recognition with the MNIST dataset.
+MLPs and ConvNNs applied to the classic "Hello World" of machine learning problems: digit recognition with the MNIST dataset.
 
 #### AI Credit (`credit-analysis`):
 
@@ -30,7 +30,7 @@ Part of a joint effort to create a credit analysis tool trained on Lending Club'
 
 ## Download instructions:
 
-(These are the download instructions for Mac as of 2019 and assume that the user has downloaded Python.)
+These are the download instructions for MacOS as of 2019. They assume that the user has downloaded Python. For Python installation, go to https://www.python.org/downloads/.
 
 ### Libraries:
 
@@ -40,4 +40,4 @@ If you do not have `pip` installed, you will get the following error: `-bash: pi
 
 ### Cloning this repository:
 
-In order to clone this repository, `cd` to the target directory and run the command: `git clone https://github.com/orangese/neural-networks.git <name>`.
+In order to clone this repository, run the command: `git clone https://github.com/orangese/neural-networks.git <target_directory>`.
