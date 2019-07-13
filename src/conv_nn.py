@@ -44,9 +44,8 @@ class Conv(Layer):
   def param_init(self):
     #initializes weights, biases, and gradients
     self.biases = np.random.normal(size = (self.num_filters, 1, 1))
-    n_out = self.num_filters * np.prod(self.kernel_dim)
-    try: n_out /= np.prod(self.next_layer.pool_dim)
-    except AttributeError: n_out /= np.prod(self.next_layer.num_neurons)
+    n_out = self.num_filters * np.prod(self.kernel_dim) \
+            / np.prod(self.next_layer.pool_dim)
     self.weights = np.random.normal(loc = 0, scale = np.sqrt(1.0 / n_out),
                                     size = (self.num_filters, *self.kernel_dim))
 
@@ -147,6 +146,10 @@ class Dense(Layer):
                                             reduce(lambda a, b : a * b,
                                                    self.previous_layer.dim)))
 
+    if self.actv.name == "softmax":
+      self.biases = np.zeros(self.biases.shape)
+      self.weights = np.zeros(self.weights.shape)
+
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
@@ -155,11 +158,11 @@ class Dense(Layer):
     try: self.biases
     except AttributeError: self.param_init()
     zs = np.dot(self.weights, self.previous_layer.output.reshape(-1, 1)) \
-                + self.biases
+         + self.biases
     self.output = self.actv.calculate(zs)
     if backprop: self.zs = zs
 
-  def backprop(self, img = None, label = None):
+  def backprop(self, label = None):
     #backpropagation for Dense layer, forward pass assumed
     try:
       self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * \
@@ -168,7 +171,15 @@ class Dense(Layer):
       self.error = self.cost.get_error(self.actv, self.output, self.zs, label)
 
     self.nabla_b += self.error
-    self.nabla_w += np.outer(self.error, self.previous_layer.output)
+    try:
+      self.nabla_w += np.outer(self.error, self.previous_layer.output)
+    except FloatingPointError:
+      print (np.linalg.norm(self.error))
+      print (np.linalg.norm(self.previous_layer.output))
+      print (self.error)
+      print (self.previous_layer.output)
+      print (self.next_layer)
+      raise FloatingPointError("dense backprop, nabla_")
 
   def param_update(self, lr, minibatch_size, epoch_len):
     #weight and bias update, backprop assumed
@@ -222,7 +233,7 @@ class Network(object):
   def backprop(self, img, label):
     #backprop through network by piecing together Layer backprop functions
     self.propagate(img, backprop = True)
-    self.layers[-1].backprop(img, label)
+    self.layers[-1].backprop(label)
     for layer in reversed(self.layers[1:len(self.layers) - 1]): layer.backprop()
 
   def param_update(self, lr, minibatch_size, epoch_len):
