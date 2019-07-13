@@ -30,7 +30,7 @@ Part of a joint effort to create a credit analysis tool trained on Lending Club'
 
 ## Download instructions
 
-These are the download instructions for MacOS as of 2019. They assume that the user has downloaded Python. For Python installation, go to https://www.python.org/downloads/.
+These are the download instructions for MacOS as of July 2019. They assume that the user has downloaded Python and that the user has administrative access on his/her computer. For Python installation, go to https://www.python.org/downloads/.
 
 ### Libraries
 
