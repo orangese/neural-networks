@@ -43,13 +43,8 @@ class Conv(Layer):
   def param_init(self):
     #initializes weights, biases, and gradients
     self.biases = np.random.normal(size = (self.num_filters, 1, 1))
-<<<<<<< HEAD
-    n_out = self.num_filters * np.prod(self.kernel_dim) / \
-            np.prod(self.next_layer.pool_dim)
-=======
     n_out = self.num_filters * np.prod(self.kernel_dim) \
             / np.prod(self.next_layer.pool_dim)
->>>>>>> old-state
     self.weights = np.random.normal(loc = 0, scale = np.sqrt(1.0 / n_out),
                                     size = (self.num_filters, *self.kernel_dim))
 
