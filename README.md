@@ -36,7 +36,7 @@ Part of a joint effort to create a credit analysis tool trained on Lending Club'
 
 In order to use the code in this repository, run the following command in terminal: `pip3 install pandas xlrd matplotlib numpy scipy tensorflow keras`. (For Python2 users, replace `pip3` with `pip`.)
 
-If you do not have `pip` installed, you will get the following error: `-bash: pip: command not found`. Refer to https://pip.pypa.io/en/stable/installing/#installing-with-get-pip-py for a `pip` installation guide.
+If you do not have `pip` installed, you will get the following error: `-bash: pip: command not found`. Refer to https://pip.pypa.io/en/stable/installing/ for a `pip` installation guide.
 
 ### Cloning this repository:
 
