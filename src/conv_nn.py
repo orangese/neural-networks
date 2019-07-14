@@ -55,9 +55,7 @@ class Conv(Layer):
     #propagates through Conv layer, param_init not assumed
     try: self.biases
     except AttributeError: self.param_init()
-    zs = np.array([convolve2d(self.weights[filter_num],
-                              self.previous_layer.output, mode = "valid")
-                   for filter_num in range(self.num_filters)]) + self.biases
+    zs = self.convolve(self.weights, self.previous_layer.output) + self.biases
     self.output = self.actv.calculate(zs)
     self.dim = self.output.shape
     if backprop: self.zs = zs
@@ -72,9 +70,7 @@ class Conv(Layer):
 
     self.nabla_b += np.sum(self.error, axis = (1, 2))[..., np.newaxis,
                                                       np.newaxis]
-    self.nabla_w += np.array([
-      convolve2d(self.previous_layer.output, err, mode = "valid")
-      for err in self.error])
+    self.nabla_w += self.convolve(self.previous_layer.output, self.error, True)
 
   def param_update(self, lr, minibatch_size):
     #weight and bias update
@@ -83,6 +79,10 @@ class Conv(Layer):
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
+
+  def convolve(self, a, b, reverse = False):
+    if reverse: return np.array([convolve2d(a, b_, mode = "valid") for b_ in b])
+    else: return np.array([convolve2d(a_, b, mode = "valid") for a_ in a])
 
 class Pooling(Layer):
   #basic pooling layer, for now, only 2-D max pooling is available
