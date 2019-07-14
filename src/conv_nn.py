@@ -149,22 +149,6 @@ class Dense(Layer):
       self.biases = np.zeros(self.biases.shape)
       self.weights = np.zeros(self.weights.shape)
 
-    if self.actv.name == "softmax":
-      self.biases = np.zeros(self.biases.shape)
-      self.weights = np.zeros(self.weights.shape)
-
-    if self.actv.name == "softmax":
-      self.biases = np.zeros(self.biases.shape)
-      self.weights = np.zeros(self.weights.shape)
-
-    if self.actv.name == "softmax":
-      self.biases = np.zeros(self.biases.shape)
-      self.weights = np.zeros(self.weights.shape)
-
-    if self.actv.name == "softmax":
-      self.biases = np.zeros(self.biases.shape)
-      self.weights = np.zeros(self.weights.shape)
-
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 

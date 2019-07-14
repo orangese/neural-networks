@@ -113,7 +113,7 @@ def test(net_type = "conv", data = None, shorten = False, test_acc = False):
 if __name__ == "__main__":
   np.seterr(all = "raise")
   data = load_data("conv")
-##  net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data,
-##             shorten = False)
-  for i in range(10):
-    net = test(net_type = "conv", data = data, shorten = True)
+  net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data,
+             shorten = False)
+##  for i in range(10):
+##    net = test(net_type = "conv", data = data, shorten = True)
