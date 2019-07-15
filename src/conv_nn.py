@@ -83,17 +83,17 @@ class Conv(Layer):
 
   def convolve(self, a, b, reverse = False):
     f = convolve if self.num_fmaps != 1 else convolve2d
-    if reverse:
-      if f is convolve:
+    if self.num_fmaps != 1:
+      if reverse:
         try: return np.squeeze([f(b_, a, "valid") for b_ in b])
         except ValueError: return np.squeeze([f(b_, a.reshape(*reversed(a.shape)),
                                                 "valid") for b_ in b])
-      else: return np.array([f(a, b_, "valid") for b_ in b])
-    else:
-      if f is convolve:
+      else:
         try: return np.squeeze([f(b, a_, "valid") for a_ in a])
         except ValueError: return np.squeeze([f(b.reshape(*reversed(b.shape)),
                                                 a_, "valid") for a_ in a])
+    else:
+      if reverse: return np.array([f(a, b_, "valid") for b_ in b])
       else: return np.array([f(a_, b, "valid") for a_ in a])
 
 class Pooling(Layer):
