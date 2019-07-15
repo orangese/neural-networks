@@ -164,10 +164,10 @@ class Dense(Layer):
   def backprop(self, label = None):
     #backpropagation for Dense layer, forward pass assumed
     try:
+      self.error = self.cost.get_error(self.actv, self.output, self.zs, label)
+    except AttributeError:
       self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * \
                    self.actv.derivative(self.zs)
-    except AttributeError:
-      self.error = self.cost.get_error(self.actv, self.output, self.zs, label)
 
     self.nabla_b += self.error
     try:

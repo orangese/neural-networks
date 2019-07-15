@@ -27,17 +27,20 @@ def closest_multiples(n):
     if n % i == 0: factors.append(((i, int(n / i)), (abs(i - int(n / i)))))
   return factors[np.argmin(list(zip(*factors))[1])][0]
 
-def display(net, show_kernel = False, layer = Layer):
+def display(net, to_show = "output", layer = Layer):
   #displays output of a layer or kernel weights using plt.imshow
-  if show_kernel: layer = Conv
+  if to_show == "kernel": layer = Conv
   disp_layer = next((l for l in net.layers if isinstance(l, layer)), None)
   if disp_layer is None: return None
-  disp_obj = np.copy(disp_layer.weights if show_kernel else disp_layer.output)
+  if to_show == "output": disp_obj = np.copy(disp_layer.output)
+  elif to_show == "kernel": disp_obj = np.copy(disp_layer.weights)
+  elif to_show == "error": disp_obj = np.copy(disp_layer.error.reshape
+                                              (disp_layer.dim))
+  
   fig, axes = plt.subplots() if layer is Layer \
               else plt.subplots(*closest_multiples(disp_layer.dim[0]))
   fig.canvas.set_window_title("Visualizing convolutional networks")
-  if show_kernel: fig.suptitle("Kernel weights for {0} layer".format(layer))
-  else: fig.suptitle("Output for {0} layer".format(layer))
+  fig.suptitle("{0} for {1} layer".format(to_show, layer))
   try:
     for ax in axes.flatten():
       ax.imshow(disp_obj[list(axes.flatten()).index(ax)], cmap = "gray")
@@ -50,7 +53,7 @@ def display(net, show_kernel = False, layer = Layer):
 def display_net(net):
   for layer in net.layers:
     if isinstance(layer, Conv):
-      display(net, show_kernel = True)
+      display(net, to_show = "kernel")
       display(net, layer = Conv)
     elif isinstance(layer, Pooling): display(net, layer = Pooling)
     elif isinstance(layer, Dense): continue
@@ -111,6 +114,28 @@ def test(net_type = "conv", data = None, shorten = False, test_acc = False):
 
 #Testing area
 if __name__ == "__main__":
+##  net = Network([Layer((28, 28)), Conv((5, 5), 20, actv = "sigmoid"),
+##                 Pooling((2, 2)), Dense(100, actv = "sigmoid"),
+##                 Dense(10, actv = "sigmoid")],
+##                cost = "cross-entropy")
+##  a = np.zeros((28, 28))
+##  y = np.zeros((10, 1))
+##  y[0] = 1.0
+##  
+##  net.propagate(a)
+##  for layer in net.layers:
+##    try: layer.weights = np.ones(layer.weights.shape); \
+##                         layer.biases = np.zeros(layer.biases.shape)
+##    except AttributeError: continue
+##  net.backprop(a, y)
+##  print (net.layers[-1].output, "net.layers[-1].output")
+##  print (net.layers[-1].error, "net.layers[-1].error")
+##  print (net.layers[-2].error, "net.layers[-2].error")
+##  display(net, layer = Conv)
+##  display(net, to_show = "kernel", layer = Conv)
+##  display(net, layer = Pooling)
+##  display(net, to_show = "error", layer = Conv)
+##  display(net, to_show = "error", layer = Pooling)
   np.seterr(all = "raise")
   data = load_data("conv")
   net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data,
