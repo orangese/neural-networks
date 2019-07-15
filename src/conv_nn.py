@@ -26,13 +26,12 @@ class Layer(object):
     #dim refers to the dimensions of the output of this layer
 
 class Conv(Layer):
-  #basic 2-D convolutional layer with stride = 1
+  #convolutional layer with stride of 1 and no padding
 
-  def __init__(self, kernel_dim, num_filters, num_fmaps = 1, actv = "sigmoid",
+  def __init__(self, kernel_dim, num_filters, actv = "sigmoid",
                previous_layer = None, next_layer = None):
     self.kernel_dim = kernel_dim
     self.num_filters = num_filters
-    self.num_fmaps = num_fmaps
     self.actv = Activation(actv)
 
     self.previous_layer = previous_layer
@@ -42,6 +41,9 @@ class Conv(Layer):
 
   def param_init(self):
     #initializes weights, biases, and gradients
+    self.num_fmaps = self.previous_layer.dim[0] \
+                     if len(self.previous_layer.dim) == 3 else 1
+    
     self.biases = np.random.normal(size = (self.num_filters, 1, 1))
     scale = np.sqrt(1.0 / (self.num_filters * np.prod(self.kernel_dim) \
             / np.prod(self.next_layer.pool_dim)))
@@ -81,11 +83,12 @@ class Conv(Layer):
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
-  def convolve(self, _a, _b, reverse = False):
-    a, b = _a, _b
+  def convolve(self, a_, b_, reverse = False):
+    #convolves a_ with b_, reverse controls order of convolution
+    a, b = np.copy(a_), np.copy(b_)
     if isinstance(self.previous_layer, Pooling):
-      if reverse: a = _a.reshape(*reversed(_a.shape))
-      else: b = _b.reshape(*reversed(_b.shape))
+      if reverse: a.resize(*reversed(a.shape))
+      else: b.resize(*reversed(b.shape))
     if self.num_fmaps != 1:
       if reverse: return np.squeeze([convolve(b_, a, "valid") for b_ in b])
       else: return np.squeeze([convolve(b, a_, "valid") for a_ in a])
@@ -94,7 +97,7 @@ class Conv(Layer):
       else: return np.array([convolve2d(a_, b, "valid") for a_ in a])
 
 class Pooling(Layer):
-  #basic pooling layer, for now, only 2-D max pooling is available
+  #2-D max pooling layer
 
   def __init__(self, pool_dim, previous_layer = None, next_layer = None):
     self.pool_dim = pool_dim
@@ -287,5 +290,6 @@ class Network(object):
 if __name__ == "__main__":
   np.seterr(all = "raise")
   net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
-                 Conv((5, 5), 20, 20), Pooling((2, 2)), Dense(100), Dense(10)])
+                 Conv((5, 5), 10), Pooling((2, 2)), Dense(100), Dense(10)])
   net.propagate(np.zeros((28, 28)))
+  for layer in net.layers: print (layer.dim)
