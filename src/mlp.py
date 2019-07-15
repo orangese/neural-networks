@@ -38,7 +38,6 @@ class Cost(object):
     elif self.name == "log-likelihood":
       cost = np.sum(np.nan_to_num(np.log(a[np.argmax(y)]) for (a, y) in pairs)) \
              / (-1.0 * len(pairs))
-
   
     return cost
 
