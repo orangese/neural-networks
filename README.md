@@ -40,4 +40,4 @@ If you do not have `pip` installed, you will get the following error: `-bash: pi
 
 ### Cloning this repository
 
-In order to clone this repository, run the command: `git clone https://github.com/orangese/neural-networks.git <target_directory>`.
+In order to clone this repository, run the command: `git clone https://github.com/orangese/neural-networks.git <target_directory>`. In order to use the code in this repository, you have to change the directory paths in the code (e.g., references to other programs and datasets).
