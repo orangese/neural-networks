@@ -83,15 +83,13 @@ class Conv(Layer):
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
-  def convolve(self, a_, b_, reverse = False):
+  def convolve(self, a, b, reverse = False):
     #convolves a_ with b_, reverse controls order of convolution
-    a, b = np.copy(a_), np.copy(b_)
-    if isinstance(self.previous_layer, Pooling):
-      if reverse: a.resize(*reversed(a.shape))
-      else: b.resize(*reversed(b.shape))
     if self.num_fmaps != 1:
-      if reverse: return np.squeeze([convolve(b_, a, "valid") for b_ in b])
-      else: return np.squeeze([convolve(b, a_, "valid") for a_ in a])
+      if reverse: return np.squeeze([convolve(b_, a.reshape(*reversed(a.shape)),
+                                              "valid") for b_ in b])
+      else: return np.squeeze([convolve(b.reshape(*reversed(b.shape)), a_,
+                                        "valid") for a_ in a])
     else:
       if reverse: return np.array([convolve2d(a, b_, "valid") for b_ in b])
       else: return np.array([convolve2d(a_, b, "valid") for a_ in a])
