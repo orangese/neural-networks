@@ -12,7 +12,7 @@ layers are organized into their own classes.
 
 #Imports
 import numpy as np
-from scipy.signal import convolve2d
+from scipy.signal import convolve, convolve2d
 from functools import reduce
 from mlp import Activation, Cost
 
@@ -28,21 +28,21 @@ class Layer(object):
 class Conv(Layer):
   #basic 2-D convolutional layer with stride = 1
 
-  def __init__(self, kernel_dim, num_filters, actv = "sigmoid",
+  def __init__(self, kernel_dim, num_filters, num_fmaps = 1, actv = "sigmoid",
                previous_layer = None, next_layer = None):
     self.kernel_dim = kernel_dim
     self.num_filters = num_filters
+    self.num_fmaps = num_fmaps
     self.actv = Activation(actv)
 
     self.previous_layer = previous_layer
     self.next_layer = next_layer
-    if self.next_layer:
-      assert isinstance(self.next_layer, Pooling), \
-             "Conv layer must be followed by Pooling layer"
+    assert isinstance(self.next_layer, Pooling) or self.next_layer is None, \
+           "Conv layer must be followed by Pooling layer"
 
   def param_init(self):
     #initializes weights, biases, and gradients
-    self.biases = np.random.normal(size = (self.num_filters, 1, 1))
+    self.biases = np.random.normal(size = (self.num_filters, 1, 1, 1))
     n_out = self.num_filters * np.prod(self.kernel_dim) \
             / np.prod(self.next_layer.pool_dim)
     self.weights = np.random.normal(loc = 0, scale = np.sqrt(1.0 / n_out),
@@ -81,8 +81,16 @@ class Conv(Layer):
     self.nabla_w = np.zeros(self.weights.shape)
 
   def convolve(self, a, b, reverse = False):
-    if reverse: return np.array([convolve2d(a, b_, mode = "valid") for b_ in b])
-    else: return np.array([convolve2d(a_, b, mode = "valid") for a_ in a])
+    func = convolve if self.num_fmaps != 1 else convolve2d
+    if reverse:
+      try: return np.expand_dims([func(a, b_, mode = "valid") for b_ in b], 3)
+      except ValueError: return np.array([func(np.expand_dims(b_, 3), a,
+                                               mode = "valid") for b_ in b])
+    else:
+      try: return np.expand_dims([func(a_, b, mode = "valid") for a_ in a], 3)
+      except ValueError: return np.array([func(b.reshape(*reversed(b.shape)),
+                                               np.expand_dims(a_, 3),
+                                               mode = "valid") for a_ in a])
 
 class Pooling(Layer):
   #basic pooling layer, for now, only 2-D max pooling is available
@@ -274,3 +282,9 @@ class Network(object):
     vector = np.zeros(self.layers[-1].dim)
     vector[num] = 1.0
     return vector
+
+if __name__ == "__main__":
+  np.seterr(all = "raise")
+  net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
+                 Conv((5, 5), 20, 20), Pooling((2, 2)), Dense(100), Dense(10)])
+  net.propagate(np.zeros((28, 28)))
