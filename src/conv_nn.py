@@ -81,20 +81,17 @@ class Conv(Layer):
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
-  def convolve(self, a, b, reverse = False):
-    f = convolve if self.num_fmaps != 1 else convolve2d
+  def convolve(self, _a, _b, reverse = False):
+    a, b = _a, _b
+    if isinstance(self.previous_layer, Pooling):
+      if reverse: a = _a.reshape(*reversed(_a.shape))
+      else: b = _b.reshape(*reversed(_b.shape))
     if self.num_fmaps != 1:
-      if reverse:
-        try: return np.squeeze([f(b_, a, "valid") for b_ in b])
-        except ValueError: return np.squeeze([f(b_, a.reshape(*reversed(a.shape)),
-                                                "valid") for b_ in b])
-      else:
-        try: return np.squeeze([f(b, a_, "valid") for a_ in a])
-        except ValueError: return np.squeeze([f(b.reshape(*reversed(b.shape)),
-                                                a_, "valid") for a_ in a])
+      if reverse: return np.squeeze([convolve(b_, a, "valid") for b_ in b])
+      else: return np.squeeze([convolve(b, a_, "valid") for a_ in a])
     else:
-      if reverse: return np.array([f(a, b_, "valid") for b_ in b])
-      else: return np.array([f(a_, b, "valid") for a_ in a])
+      if reverse: return np.array([convolve2d(a, b_, "valid") for b_ in b])
+      else: return np.array([convolve2d(a_, b, "valid") for a_ in a])
 
 class Pooling(Layer):
   #basic pooling layer, for now, only 2-D max pooling is available
