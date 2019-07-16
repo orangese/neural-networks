@@ -83,15 +83,18 @@ class Conv(Layer):
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
-  def convolve(self, a, b, reverse = False):
-    #convolves a_ with b_, reverse controls order of convolution
+  def convolve(self, a, b, is_error = False):
+    #convolves a_ with b_, order of convolution depends on is_error
+    print (a.shape, b.shape, is_error)
     if self.num_fmaps != 1:
-      if reverse: return np.squeeze([convolve(b_, a.reshape(*reversed(a.shape)),
-                                              "valid") for b_ in b])
-      else: return np.squeeze([convolve(b.reshape(*reversed(b.shape)), a_,
-                                        "valid") for a_ in a])
+      if is_error:
+        return np.squeeze([convolve(b_, a.reshape(*reversed(a.shape)), "valid")
+                           for b_ in b])
+      else:
+        return np.squeeze([convolve(b.reshape(*reversed(b.shape)), a_, "valid")
+                           for a_ in a])
     else:
-      if reverse: return np.array([convolve2d(a, b_, "valid") for b_ in b])
+      if is_error: return np.array([convolve2d(a, b_, "valid") for b_ in b])
       else: return np.array([convolve2d(a_, b, "valid") for a_ in a])
 
 class Pooling(Layer):
@@ -180,15 +183,7 @@ class Dense(Layer):
                    self.actv.derivative(self.zs)
 
     self.nabla_b += self.error
-    try:
-      self.nabla_w += np.outer(self.error, self.previous_layer.output)
-    except FloatingPointError:
-      print (np.linalg.norm(self.error))
-      print (np.linalg.norm(self.previous_layer.output))
-      print (self.error)
-      print (self.previous_layer.output)
-      print (self.next_layer)
-      raise FloatingPointError("dense backprop, nabla_")
+    self.nabla_w += np.outer(self.error, self.previous_layer.output)
 
   def param_update(self, lr, minibatch_size, epoch_len):
     #weight and bias update, backprop assumed
@@ -290,4 +285,5 @@ if __name__ == "__main__":
   net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
                  Conv((5, 5), 10), Pooling((2, 2)), Dense(100), Dense(10)])
   net.propagate(np.zeros((28, 28)))
+  net.backprop(np.zeros((28,28)), np.zeros((10, 1)))
   for layer in net.layers: print (layer.dim)
