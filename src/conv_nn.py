@@ -12,7 +12,7 @@ layers are organized into their own classes.
 
 #Imports
 import numpy as np
-from scipy.signal import convolve2d
+from scipy.signal import convolve, convolve2d
 from functools import reduce
 from mlp import Activation, Cost
 
@@ -26,7 +26,7 @@ class Layer(object):
     #dim refers to the dimensions of the output of this layer
 
 class Conv(Layer):
-  #basic 2-D convolutional layer with stride = 1
+  #convolutional layer with stride of 1 and no padding
 
   def __init__(self, kernel_dim, num_filters, actv = "sigmoid",
                previous_layer = None, next_layer = None):
@@ -36,17 +36,20 @@ class Conv(Layer):
 
     self.previous_layer = previous_layer
     self.next_layer = next_layer
-    if self.next_layer:
-      assert isinstance(self.next_layer, Pooling), \
-             "Conv layer must be followed by Pooling layer"
+    assert isinstance(self.next_layer, Pooling) or self.next_layer is None, \
+           "Conv layer must be followed by Pooling layer"
 
   def param_init(self):
     #initializes weights, biases, and gradients
+    self.num_fmaps = self.previous_layer.dim[0] \
+                     if len(self.previous_layer.dim) == 3 else 1
+    
     self.biases = np.random.normal(size = (self.num_filters, 1, 1))
-    n_out = self.num_filters * np.prod(self.kernel_dim) \
-            / np.prod(self.next_layer.pool_dim)
-    self.weights = np.random.normal(loc = 0, scale = np.sqrt(1.0 / n_out),
-                                    size = (self.num_filters, *self.kernel_dim))
+    scale = np.sqrt(1.0 / (self.num_filters * np.prod(self.kernel_dim) \
+            / np.prod(self.next_layer.pool_dim)))
+    size = [self.num_filters, *self.kernel_dim]
+    if self.num_fmaps != 1: size.append(self.num_fmaps)
+    self.weights = np.random.normal(loc = 0, scale = scale, size = size)
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
@@ -65,11 +68,10 @@ class Conv(Layer):
     self.error = self.next_layer.get_loc_fields(np.zeros(self.dim))
     np.put_along_axis(self.error, self.next_layer.max_args,
                       self.next_layer.error.reshape(*self.next_layer.dim, 1),
-                      axis = 3)
+                      axis = -1)
     self.error = self.next_layer.consolidate(self.error)
 
-    self.nabla_b += np.sum(self.error, axis = (1, 2))[..., np.newaxis,
-                                                      np.newaxis]
+    self.nabla_b += np.sum(self.error, axis = (1, 2))[:, np.newaxis, np.newaxis]
     self.nabla_w += self.convolve(self.previous_layer.output, self.error, True)
 
   def param_update(self, lr, minibatch_size):
@@ -80,12 +82,18 @@ class Conv(Layer):
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
-  def convolve(self, a, b, reverse = False):
-    if reverse: return np.array([convolve2d(a, b_, mode = "valid") for b_ in b])
-    else: return np.array([convolve2d(a_, b, mode = "valid") for a_ in a])
+  def convolve(self, a, b, is_err = False):
+    #convolves a_ with b_, order of convolution depends on err
+    if self.num_fmaps != 1:
+      if is_err: a, b = np.expand_dims(b, axis = -1), a
+      return np.squeeze([convolve(b.reshape(*reversed(b.shape)), a_,  "valid")
+                         for a_ in a])
+    else:
+      if is_err: return np.array([convolve2d(a, b_, "valid") for b_ in b])
+      else: return np.array([convolve2d(a_, b, "valid") for a_ in a])
 
 class Pooling(Layer):
-  #basic pooling layer, for now, only 2-D max pooling is available
+  #2-D max pooling layer
 
   def __init__(self, pool_dim, previous_layer = None, next_layer = None):
     self.pool_dim = pool_dim
@@ -97,7 +105,7 @@ class Pooling(Layer):
     self.next_layer = next_layer
 
   def get_loc_fields(self, a):
-    #divides the convolutional output into local fields to prepare for pooling
+    #divides convolutional output into local fields to prepare for pooling
     loc_fields = a.reshape(a.shape[0], int(a.shape[1] / self.pool_dim[0]),
                   self.pool_dim[0], int(a.shape[2] / self.pool_dim[1]),
                   self.pool_dim[1]).transpose(0, 1, 3, 2, 4)
@@ -114,13 +122,18 @@ class Pooling(Layer):
     #propagates through Pooling layer
     fmaps = self.get_loc_fields(self.previous_layer.output)
     if backprop:
-      self.max_args = np.expand_dims(np.argmax(fmaps, axis = 3), axis = 3)
-    self.output = np.max(fmaps, axis = 3)
+      self.max_args = np.expand_dims(np.argmax(fmaps, axis = -1), axis = -1)
+    self.output = np.max(fmaps, axis = -1)
     self.dim = self.output.shape
 
   def backprop(self):
     #backpropagation through Pooling layer, forward pass assumed
-    self.error = np.dot(self.next_layer.weights.T, self.next_layer.error)
+    try: self.error = np.dot(self.next_layer.weights.T, self.next_layer.error)
+    except ValueError:
+      print (self.dim)
+      self.error = np.dot(self.next_layer.weights.T,
+                          np.expand_dims(self.next_layer.error, 0))
+      print (self.error.shape)
     #activation of pooling layer is linear w.r.t. to the max activations in
     #the local pool, so the derivative of the activation function is 1
 
@@ -170,15 +183,7 @@ class Dense(Layer):
                    self.actv.derivative(self.zs)
 
     self.nabla_b += self.error
-    try:
-      self.nabla_w += np.outer(self.error, self.previous_layer.output)
-    except FloatingPointError:
-      print (np.linalg.norm(self.error))
-      print (np.linalg.norm(self.previous_layer.output))
-      print (self.error)
-      print (self.previous_layer.output)
-      print (self.next_layer)
-      raise FloatingPointError("dense backprop, nabla_")
+    self.nabla_w += np.outer(self.error, self.previous_layer.output)
 
   def param_update(self, lr, minibatch_size, epoch_len):
     #weight and bias update, backprop assumed
@@ -274,3 +279,11 @@ class Network(object):
     vector = np.zeros(self.layers[-1].dim)
     vector[num] = 1.0
     return vector
+
+if __name__ == "__main__":
+  np.seterr(all = "raise")
+  net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
+                 Conv((5, 5), 10), Pooling((2, 2)), Dense(100), Dense(10)])
+  net.propagate(np.zeros((28, 28)))
+  net.backprop(np.zeros((28,28)), np.zeros((10, 1)))
+  for layer in net.layers: print (layer.dim)
