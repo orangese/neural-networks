@@ -80,9 +80,9 @@ def test(net_type = "conv", data = None, shorten = False, test_acc = False):
     data["test"] = data["test"][:1000]
   
   if net_type == "conv":
-    net = Network([Layer((28, 28)), Conv((5, 5), 20, actv = "sigmoid"),
-                   Pooling((2, 2)), Dense(100, actv = "sigmoid", reg = 0.0),
-                   Dense(10, actv = "softmax", reg = 0.0)],
+    net = Network([Layer((28, 28)), Conv((5, 5), 20, actv = "relu"),
+                   Pooling((2, 2)), Dense(100, actv = "relu", reg = 5.0),
+                   Dense(10, actv = "softmax", reg = 5.0)],
                   cost = "log-likelihood")
   elif net_type == "mlp":
     net = Network([Layer((28, 28)),

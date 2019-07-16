@@ -69,7 +69,7 @@ class Conv(Layer):
     np.put_along_axis(self.error, self.next_layer.max_args,
                       self.next_layer.error.reshape(*self.next_layer.dim, 1),
                       axis = -1)
-    self.error = self.next_layer.consolidate(self.error)
+    self.error = Pooling.consolidate(self.error)
 
     self.nabla_b += np.sum(self.error, axis = (1, 2))[:, np.newaxis, np.newaxis]
     self.nabla_w += self.convolve(self.previous_layer.output, self.error, True)
@@ -86,8 +86,7 @@ class Conv(Layer):
     #convolves a_ with b_, order of convolution depends on err
     if self.num_fmaps != 1:
       if is_err: a, b = np.expand_dims(b, axis = -1), a
-      return np.squeeze([convolve(b.reshape(*reversed(b.shape)), a_,  "valid")
-                         for a_ in a])
+      return np.squeeze([convolve(b.T, a_, "valid") for a_ in a])
     else:
       if is_err: return np.array([convolve2d(a, b_, "valid") for b_ in b])
       else: return np.array([convolve2d(a_, b, "valid") for a_ in a])
@@ -111,13 +110,6 @@ class Pooling(Layer):
                   self.pool_dim[1]).transpose(0, 1, 3, 2, 4)
     return loc_fields.reshape(*loc_fields.shape[:3], -1)
 
-  def consolidate(self, a_):
-    #consolidates local fields into convolutional output
-    a = a_.reshape(*a_.shape[:3], int(a_.shape[3] / 2),
-                   int(a_.shape[3] / 2)).transpose(0, 1, 3, 2, 4)
-    return a.reshape(a.shape[0], a.shape[1] * a.shape[2],
-                     a.shape[3] * a.shape[4])
-
   def propagate(self, backprop = False):
     #propagates through Pooling layer
     fmaps = self.get_loc_fields(self.previous_layer.output)
@@ -128,14 +120,25 @@ class Pooling(Layer):
 
   def backprop(self):
     #backpropagation through Pooling layer, forward pass assumed
-    try: self.error = np.dot(self.next_layer.weights.T, self.next_layer.error)
+    try:
+      self.error = np.dot(self.next_layer.weights.T, self.next_layer.error)
     except ValueError:
-      print (self.dim)
-      self.error = np.dot(self.next_layer.weights.T,
-                          np.expand_dims(self.next_layer.error, 0))
+      print ("W:", self.next_layer.weights.T.shape,
+             "E:", self.next_layer.error.shape,
+             "TARJET:", self.dim)
+      self.error = self.next_layer.convolve(self.next_layer.error,
+                                            self.next_layer.weights.T, True)
       print (self.error.shape)
     #activation of pooling layer is linear w.r.t. to the max activations in
     #the local pool, so the derivative of the activation function is 1
+
+  @staticmethod
+  def consolidate(a_):
+    #consolidates local fields into convolutional output
+    a = a_.reshape(*a_.shape[:3], int(a_.shape[3] / 2),
+                   int(a_.shape[3] / 2)).transpose(0, 1, 3, 2, 4)
+    return a.reshape(a.shape[0], a.shape[1] * a.shape[2],
+                     a.shape[3] * a.shape[4])
 
 class Dense(Layer):
   #basic dense layer with multiple activation and cost functions
