@@ -1,8 +1,7 @@
-
-#Python files
+# Byte-compiled
 __pycache__/
 *.pyc
 
-#Pycharm files
+# Pycharm
 .idea/
 .DS_Store
