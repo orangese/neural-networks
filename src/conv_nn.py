@@ -85,14 +85,13 @@ class Conv(Layer):
 
   def convolve(self, a, b, is_error = False):
     #convolves a_ with b_, order of convolution depends on is_error
-    print (a.shape, b.shape, is_error)
     if self.num_fmaps != 1:
       if is_error:
-        return np.squeeze([convolve(b_, a.reshape(*reversed(a.shape)), "valid")
-                           for b_ in b])
+        return np.squeeze([convolve(
+          b_, a.reshape(*reversed(a.shape)), mode = "valid") for b_ in b])
       else:
-        return np.squeeze([convolve(b.reshape(*reversed(b.shape)), a_, "valid")
-                           for a_ in a])
+        return np.squeeze([convolve(
+          b.reshape(*reversed(b.shape)), a_, mode = "valid") for a_ in a])
     else:
       if is_error: return np.array([convolve2d(a, b_, "valid") for b_ in b])
       else: return np.array([convolve2d(a_, b, "valid") for a_ in a])
