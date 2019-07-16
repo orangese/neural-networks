@@ -10,7 +10,7 @@ Accuracy: 96.14% (25 epochs)
 """
 
 #Libraries
-from credit_analysis_loader import load_data, parse_inputs
+from credit_analysis_code import load_data, parse_inputs
 import keras
 import numpy as np
 

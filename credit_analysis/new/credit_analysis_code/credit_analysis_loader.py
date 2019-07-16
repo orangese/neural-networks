@@ -9,7 +9,6 @@ A program to load and process the new credit analysis dataset.
 
 #Libraries
 import pandas as pd
-import xlrd as xl
 import numpy as np
 
 #Globals
@@ -20,10 +19,7 @@ def sigmoid_normalize(raw_array, range_ = None):
   #function that converts a list of values between any range to [0, 1]
   array = np.copy(raw_array).astype(np.float32)
   if range_ is None:
-    try:
-      range_ = (min(array), max(array))
-    except TypeError:
-      print (raw_array)
+    range_ = (min(array), max(array))
   if range_ == (0, 1):
     return array
   #Step 1: subtract minimum from everything
@@ -49,16 +45,12 @@ def to_int(n):
   if isinstance(n, list):
     fin = []
     for element in n:
-      try:
-        fin.append(int(element))
-      except ValueError:
-        fin.append(0)
+      try: fin.append(int(element))
+      except ValueError: fin.append(0)
     return np.nan_to_num(np.array(fin, dtype = np.float32))
   else:
-    try:
-      return int(n)
-    except ValueError:
-      return 0
+    try: return int(n)
+    except ValueError: return 0
 
 def vectorize(value, range_):
   #takes a value and vectorizes it (one-hot encoder)
@@ -79,10 +71,8 @@ def get_range(data):
   #gets the ranges for a list
   ranges = []
   for element in data:
-    if element in ranges:
-      continue
-    else:
-      ranges.append(element)
+    if element in ranges: continue
+    else: ranges.append(element)
   return ranges
 
 def unison_shuffle(a, b):
@@ -176,7 +166,7 @@ def load_data(ratio, keras_ = True):
             "test": (big_data[0][num_validation + num_train:],
                      big_data[1][num_validation + num_train:])}  
 
-  return (data, cols, big_data)
+  return data, cols, big_data
 
 def load_old(ratio, keras_ = True):
   #loads the processed data from the previous dataset (hopefully not used!)
@@ -223,4 +213,4 @@ def load_old(ratio, keras_ = True):
                            big_data[1][num_train:num_validation + num_train]),
             "test": (big_data[0][num_validation:], big_data[1][num_validation:])}
 
-  return (data, 0, big_data)
+  return data, 0, big_data
