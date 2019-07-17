@@ -9,11 +9,8 @@ A program to display the results of a trained ConvNN.
 
 #Libraries
 import sys
-sys.path.insert(0, "/Users/ryan/Documents/Coding/neural-networks/src")
-from conv_nn import Network, Layer, Conv, Pooling, Dense
-sys.path.insert(0, "/Users/ryan/Documents/Coding/neural-networks/\
-                 mnist/mnist-code")
-from mnist_loader import load_data
+from src.conv_nn import Network, Layer, Conv, Pooling, Dense
+from mnist.mnist_code.mnist_loader import load_data
 import matplotlib.pyplot as plt
 import numpy as np
 from time import time
@@ -34,11 +31,9 @@ def display(net, to_show = "output", layer = Layer):
   if disp_layer is None: return None
   if to_show == "output": disp_obj = np.copy(disp_layer.output)
   elif to_show == "kernel": disp_obj = np.copy(disp_layer.weights)
-  elif to_show == "error": disp_obj = np.copy(disp_layer.error.reshape
-                                              (disp_layer.dim))
+  elif to_show == "error": disp_obj = np.copy(disp_layer.error.reshape(disp_layer.dim))
   
-  fig, axes = plt.subplots() if layer is Layer \
-              else plt.subplots(*closest_multiples(disp_layer.dim[0]))
+  fig, axes = plt.subplots() if layer is Layer else plt.subplots(*closest_multiples(disp_layer.dim[0]))
   fig.canvas.set_window_title("Visualizing convolutional networks")
   fig.suptitle("{0} for {1} layer".format(to_show, layer))
   try:
@@ -92,19 +87,15 @@ def test(net_type = "conv", data = None, shorten = False, test_acc = False):
 
   start = time()
 
-  if test_acc:
-    print ("Evaluation without training: {0}%".format(
-      net.eval_acc(data["test"])))
+  if test_acc: print ("Evaluation without training: {0}%".format(net.eval_acc(data["test"])))
   
   net.SGD(data["train"], 60, 0.1, 10, data["validation"])
 
   for i in range(10):
     pred = net.propagate(data["test"][i][0])
     if np.argmax(pred) != data["test"][i][1]:
-      print ("Ground truth: index {0} - {1}".format(
-        data["test"][i][1], round(np.asscalar(pred[data["test"][i][1]]), 5)))
-      print ("Max activation: index {0} - {1}".format(
-        np.argmax(pred), round(np.max(pred), 5)))
+      print ("Ground truth: index {0} - {1}".format(data["test"][i][1], round((pred[data["test"][i][1]]).item(), 5)))
+      print ("Max activation: index {0} - {1}".format(np.argmax(pred), round(np.max(pred), 5)))
       #display_net(net)
 
   if test_acc: print ("Accuracy: {0}%".format(net.eval_acc(data["test"])))
@@ -138,7 +129,6 @@ if __name__ == "__main__":
 ##  display(net, to_show = "error", layer = Pooling)
   np.seterr(all = "raise")
   data = load_data("conv")
-  net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data,
-             shorten = True)
+  net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data, shorten = True)
 ##  for i in range(10):
 ##    net = test(net_type = "conv", data = data, shorten = True)

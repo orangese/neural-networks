@@ -29,8 +29,7 @@ TRAINING SET IMAGE FILE (train-images-idx3-ubyte):
 ........ 
 xxxx     unsigned byte   ??               pixel
 
-Pixels are organized row-wise. Pixel values are 0 to 255.
-0 means background (white), 255 means foreground (black).
+Pixels are organized row-wise. Pixel values are 0 to 255. 0 means background (white), 255 means foreground (black).
 
 TEST SET LABEL FILE (t10k-labels-idx1-ubyte):
 [offset] [type]          [value]          [description] 
@@ -54,12 +53,8 @@ TEST SET IMAGE FILE (t10k-images-idx3-ubyte):
 ........ 
 xxxx     unsigned byte   ??               pixel
 
-Pixels are organized row-wise. Pixel values are 0 to 255. 
-0 means background (white), 255 means foreground (black). 
-
-The images are 28 x 28 pixels, with each pixel being represented
-by a number between 0 and 255. There are 70000 images in total, with 60000
-being the training/validation data and 10000 being the testing data.
+The images are 28 x 28 pixels, with each pixel being represented by a number between 0 and 255. There are 70000 images
+in total, with 60000 being the training/validation data and 10000 being the testing data.
 
 """
 
@@ -76,8 +71,7 @@ def to_int(b):
 def normalize(raw_array, range_):
   #function that converts a list of values between any range to [0, 1]
   array = np.copy(raw_array).astype(np.float32) #raw_array is not writeable
-  if range_ == (0, 1):
-    return array
+  if range_ == (0, 1): return array
   #Step 1: subtract minimum from everything
   array -= range_[0]
   #Step 2: divide by range
@@ -86,17 +80,17 @@ def normalize(raw_array, range_):
   return array
 
 def vectorize(num):
-  """function that takes in a number and vectorizes it
-  for example, if the input is a 7, this function will return [[0.]
-                                                                [0.]
-                                                                [0.]
-                                                                [0.]
-                                                                [0.]
-                                                                [0.]
-                                                                [0.]
-                                                                [1.]
-                                                                [0.]
-                                                                [0.]]"""
+  """function that takes in a number and vectorizes it.
+  For example, if the input is a 7, this function will return [[0.]
+                                                               [0.]
+                                                               [0.]
+                                                               [0.]
+                                                               [0.]
+                                                               [0.]
+                                                               [0.]
+                                                               [1.]
+                                                               [0.]
+                                                               [0.]]"""
   result = np.zeros((10, 1))
   result[num] = 1.0
   return result
@@ -107,48 +101,41 @@ def load_file(file, mode):
   with gzip.open(file, "rb") as raw:
     data = raw.read()
     magic_number = to_int(data[:4])
-    """the first four items in the file make up the magic number,
-    which identifies the file as images or labels"""
+    #the first four items in the file make up the magic number, which identifies the file as images or labels"""
     length = to_int(data[4:8])
-    """the next four items indicate the length of the file, so the
-    training files have a length of 60000, and the testing files
-    will have a length of 10000"""
+    """the next four items indicate the length of the file, so the training files have a length of 60000, and the
+     testing files will have a length of 10000"""
     if magic_number == 2049: #2049 is the magic number for labels
       parsed = np.frombuffer(data, dtype = np.uint8, offset = 8)
-      """almost all of the work is done by the line above. In essence, the line
-      above is converting the file from byte array to a re-shaped numpy array
-      with dimensions (60000,).
-      (Note the difference between (60000,) and (60000, 1): an array of shape
-      (60000,) is a 1-D array of length 60000, while an array of
-      shape (60000, 1) is a 60000-D array with each dimension of length 1"""
+      """almost all of the work is done by the line above. In essence, the line above is converting the file from byte 
+      array to a re-shaped numpy array with dimensions (60000,). (Note the difference between (60000,) and (60000, 1): 
+      an array of shape (60000,) is a 1-D array of length 60000, while an array of shape (60000, 1) is a 60000-D array 
+      with each dimension of length 1"""
       
     elif magic_number == 2051: #2051 is the magic number for images
       num_rows = to_int(data[8:12])
-      """the 8th through 12th items in the file give the number of rows
-      in one image"""
+      #the 8th through 12th items in the file give the number of rows in one image
       num_columns = to_int(data[12:16])
-      """the next four items give the number of columns in one image"""
+      #the next four items give the number of columns in one image
       if mode == "mlp":
         parsed = normalize(np.frombuffer(data, dtype = np.uint8, offset = 16).
-                         reshape(length, num_rows * num_columns, 1), (0, 255))
+                           reshape(length, num_rows * num_columns, 1), (0, 255))
       else:
         parsed = normalize(np.frombuffer(data, dtype = np.uint8, offset = 16).
                          reshape(length, num_rows, num_columns), (0, 255))
-      """converting the file from byte array to reshaped numpy array
-      in order to prepare it for usage in the digit_classifier program"""
+      #converting the file from byte array to reshaped numpy array in order to prepare it for usage
     else:
       parsed = -1 #something went wrong
 
     return parsed
 
 def load_data(mode):
-  """wrapper function that implements load_file() to parse all of the
-  MNIST files and stores the result in a dictionary"""
+  #wrapper function that implements load_file() to parse all of the MNIST files
   data = {"train": [], "validation": [], "test": []}
   
-  train_images = load_file("/Users/ryan/Documents/Coding/neural-networks/mnist/mnist-dataset/train-images-idx3-ubyte.gz",
+  train_images = load_file("/Users/Ryan/PycharmProjects/neural-networks/mnist/mnist_dataset/train-images-idx3-ubyte.gz",
                            mode = mode)
-  train_labels = load_file("/Users/ryan/Documents/Coding/neural-networks/mnist/mnist-dataset/train-labels-idx1-ubyte.gz",
+  train_labels = load_file("/Users/Ryan/PycharmProjects/neural-networks/mnist/mnist_dataset/train-labels-idx1-ubyte.gz",
                            mode = mode)
   data["validation"] = np.asarray(list(zip(train_images[:10000],
                                        np.asarray(train_labels))))
@@ -159,10 +146,10 @@ def load_data(mode):
                                               i in train_labels[10000:]]))))
   """data["train"] is a set of 50,000 tuples (x, y) containing the
   28 x 28 image "x" and the corresponding 10-D vectorized label "y" """
-  
-  test_images = load_file("/Users/ryan/Documents/Coding/neural-networks/mnist/mnist-dataset/t10k-images-idx3-ubyte.gz",
+
+  test_images = load_file("/Users/Ryan/PycharmProjects/neural-networks/mnist/mnist_dataset/t10k-images-idx3-ubyte.gz",
                           mode = mode)
-  test_labels = load_file("/Users/ryan/Documents/Coding/neural-networks/mnist/mnist-dataset//t10k-labels-idx1-ubyte.gz",
+  test_labels = load_file("/Users/Ryan/PycharmProjects/neural-networks/mnist/mnist_dataset/t10k-labels-idx1-ubyte.gz",
                           mode = mode)
   data["test"] = np.asarray(list(zip(test_images,
                                  np.asarray(test_labels))))
@@ -170,15 +157,12 @@ def load_data(mode):
   return data
 
 def display_image(pixels, label = None):
-  """function that displays an image using matplotlib--
-   not really necessary for the digit classifier"""
+  #function that displays an image using matplotlib-- not really necessary for the digit classifier
   figure = plt.gcf()
   figure.canvas.set_window_title("Number display")
   
-  if label != None:
-    plt.title("Label: \"{label}\"".format(label = label))
-  else:
-    plt.title("No label")
+  if label: plt.title("Label: \"{label}\"".format(label = label))
+  else: plt.title("No label")
     
   plt.imshow(pixels, cmap = "gray")
   plt.show()

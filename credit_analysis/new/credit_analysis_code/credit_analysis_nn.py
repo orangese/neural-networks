@@ -2,15 +2,15 @@
 
 "credit_analysis_nn.py"
 
-A program that uses keras to build and train a neural network to grade
-the quality of a loan.
+A program that uses keras to build and train a neural network to grade the quality of a loan.
 
 Accuracy: 96.14% (25 epochs)
 
 """
 
 #Libraries
-from credit_analysis_code import load_data, parse_inputs
+from credit_analysis.new.credit_analysis_code.credit_analysis_loader \
+  import load_data, parse_inputs
 import keras
 import numpy as np
 
@@ -22,8 +22,7 @@ def build():
     keras.layers.Dense(200, input_shape = (200, ), activation = "relu"),
     keras.layers.Dense(7, input_shape = (200, ), activation = "softmax")])
     
-  model.compile(loss = "binary_crossentropy", optimizer = "adam",
-                metrics = ["accuracy"])
+  model.compile(loss = "binary_crossentropy", optimizer = "adam", metrics = ["accuracy"])
   
   return model
 
@@ -31,9 +30,7 @@ def train(data, model):
   #trains model
   tr_X, tr_Y = data["train"]
   
-  model.fit(tr_X, tr_Y,
-            epochs = 5, batch_size = 32, verbose = 2,
-            validation_data = data["validation"])
+  model.fit(tr_X, tr_Y, epochs = 5, batch_size = 32, verbose = 2, validation_data = data["validation"])
   
   return model
 
@@ -78,5 +75,4 @@ if __name__ == "__main__":
     error += abs(prediction - true)
   print ("Average error:", round(error / len(data["test"][0]), 5))
 
-  for i in range(10):
-    print (test(model, cols))
+  for i in range(10): print (test(model, cols))

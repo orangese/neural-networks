@@ -18,10 +18,8 @@ globals_ = {}
 def sigmoid_normalize(raw_array, range_ = None):
   #function that converts a list of values between any range to [0, 1]
   array = np.copy(raw_array).astype(np.float32)
-  if range_ is None:
-    range_ = (min(array), max(array))
-  if range_ == (0, 1):
-    return array
+  if range_ is None: range_ = (min(array), max(array))
+  if range_ == (0, 1): return array
   #Step 1: subtract minimum from everything
   array -= range_[0]
   #Step 2: divide by range
@@ -32,13 +30,12 @@ def sigmoid_normalize(raw_array, range_ = None):
 def convert_categorical(categoricals, range_):
   #converts a list of categorical variables to an integer list, range = [0, 1]
   to_int = len(range_)
-  fractions = np.array([i / (to_int - 1)  for i in range(to_int)],
-                       dtype = np.float32)
+  fractions = np.array([i / (to_int - 1)  for i in range(to_int)], dtype = np.float32)
   if isinstance(categoricals, str):
     return fractions[range_.index(categoricals)]
   else:
     return np.nan_to_num(np.array([fractions[range_.index(categorical)]
-            for categorical in categoricals], dtype = np.float32))
+                                   for categorical in categoricals], dtype = np.float32))
 
 def to_int(n):
   #turns every element in a list into an int
@@ -119,20 +116,16 @@ def load_file(filestream):
       globals_[feature] = [r.lower() for r in range_]
       data[feature] = convert_categorical(data[feature], range_)
 
-  return (data.values.reshape(len(data.index), len(data.columns), 1),
-          np.array(labels), data.columns)
+  return data.values.reshape(len(data.index), len(data.columns), 1), np.array(labels), data.columns
 
 def parse_inputs(inputs_, cols):
   #parses a single set of inputs
   parsed = []
   for input_ in inputs_:
-    if cols[inputs_.index(input_)] == "term" or \
-       cols[inputs_.index(input_)] == "emp_length":
+    if cols[inputs_.index(input_)] == "term" or cols[inputs_.index(input_)] == "emp_length":
       temp = to_int(strip(input_))
     try:
-      temp = sigmoid_normalize(strip(input_),
-                                      range_ = globals_[
-                                        cols[inputs_.index(input_)]])
+      temp = sigmoid_normalize(strip(input_), range_ = globals_[cols[inputs_.index(input_)]])
     except ValueError:
       temp = convert_categorical(input_,
                                    globals_[cols[inputs_.index(input_)]])
@@ -143,8 +136,8 @@ def parse_inputs(inputs_, cols):
 
 def load_data(ratio, keras_ = True):
   #data processer (essentially a wrapper for "load_file()")
-  inputs, labels, cols = load_file(
-    "/Users/ryan/Documents/Coding/neural-networks/credit-analysis/new/credit-analysis-dataset/credit_analysis_dataset.xlsx")
+  inputs, labels, cols = load_file("/Users/Ryan/PycharmProjects/neural-networks/credit_analysis/new/\
+                                   credit_analysis_dataset/credit_analysis_dataset.xlsx")
   
   if not keras_:
     big_data = np.array(list(zip(inputs, labels)))
@@ -155,16 +148,14 @@ def load_data(ratio, keras_ = True):
             "validation": np.array(big_data[num_train:num_validation + num_train]),
             "test": np.array(big_data[num_validation + num_train:])}
   else:
-    big_data = unison_shuffle(inputs.reshape(len(inputs), len(inputs[0])),
-                                labels.reshape(len(labels), len(labels[0])))
+    big_data = unison_shuffle(inputs.reshape(len(inputs), len(inputs[0])), labels.reshape(len(labels), len(labels[0])))
     num_train = int(ratio * len(big_data[0]))
     num_validation = int((len(big_data[0]) - num_train) / 2)
     
     data = {"train": (big_data[0][:num_train], big_data[1][:num_train]),
             "validation": (big_data[0][num_train:num_validation + num_train],
                            big_data[1][num_train:num_validation + num_train]),
-            "test": (big_data[0][num_validation + num_train:],
-                     big_data[1][num_validation + num_train:])}  
+            "test": (big_data[0][num_validation + num_train:], big_data[1][num_validation + num_train:])}
 
   return data, cols, big_data
 
@@ -172,8 +163,8 @@ def load_old(ratio, keras_ = True):
   #loads the processed data from the previous dataset (hopefully not used!)
   inputs = []
   labels = []
-  with open("/Users/ryan/Documents/Coding/neural-networks/credit-analysis/original/credit-analysis-results-original/credit_analysis_processed_data_original.txt",
-            "r") as filestream:
+  with open("/Users/Ryan/PycharmProjects/neural-networks/credit_analysis/original/credit_analysis_results_original/\
+            credit_analysis_processed_data_original.txt", "r") as filestream:
     counter = 1
     temp = []
     for line in filestream:
@@ -201,10 +192,8 @@ def load_old(ratio, keras_ = True):
             "test": np.array(big_data[num_validation + num_train:])}
     
   else:
-    big_data = unison_shuffle(np.array(inputs, dtype = np.float32).
-                              reshape(len(inputs), len(inputs[0])),
-                              np.array(labels, dtype = np.float32).
-                              reshape(len(labels), len(labels[0])))
+    big_data = unison_shuffle(np.array(inputs, dtype = np.float32).reshape(len(inputs), len(inputs[0])),
+                              np.array(labels, dtype = np.float32).reshape(len(labels), len(labels[0])))
     num_train = int(ratio * len(big_data[0]))
     num_validation = int((len(big_data[0]) - num_train) / 2)
     
