@@ -66,8 +66,8 @@ class Conv(Layer):
                       axis = -1)
     self.error = Pooling.consolidate(self.error)
 
-    self.nabla_b += np.sum(self.error, axis = (1, 2))[:, np.newaxis, np.newaxis]
-    self.nabla_w += self.convolve(self.previous_layer.output, self.error, is_err = True)
+    self.nabla_b += np.sum(self.error, axis = (1, 2))[..., np.newaxis, np.newaxis]
+    self.nabla_w += self.convolve(self.previous_layer.output, np.rot90(self.error, 2), is_err = True)
 
   def param_update(self, lr, minibatch_size):
     """weight and bias update"""
@@ -111,12 +111,7 @@ class Pooling(Layer):
 
   def backprop(self):
     """backpropagation through Pooling layer, forward pass assumed"""
-    try:
-      self.error = np.dot(self.next_layer.weights.T, self.next_layer.error)
-    except ValueError:
-      print ("W:", self.next_layer.weights.T.shape, "E:", self.next_layer.error.shape, "TARJET:", self.dim)
-      self.error = self.next_layer.convolve(self.next_layer.error, self.next_layer.weights.T, True)
-      print (self.error.shape)
+    self.error = np.dot(self.next_layer.weights.T, self.next_layer.error)
     #activation of pooling layer is linear w.r.t. to the max activations in
     #the local pool, so the derivative of the activation function is 1
 

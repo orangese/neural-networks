@@ -8,7 +8,6 @@ A program to display the results of a trained ConvNN.
 """
 
 #Libraries
-import sys
 from src.conv_nn import Network, Layer, Conv, Pooling, Dense
 from mnist.mnist_code.mnist_loader import load_data
 import matplotlib.pyplot as plt
@@ -22,7 +21,7 @@ def closest_multiples(n):
   factors = []
   for i in range(1, n):
     if n % i == 0: factors.append(((i, int(n / i)), (abs(i - int(n / i)))))
-  return factors[np.argmin(list(zip(*factors))[1])][0]
+  return factors[np.argmin(list(zip(*factors))[1]).item()][0]
 
 def display(net, to_show = "output", layer = Layer):
   #displays output of a layer or kernel weights using plt.imshow
@@ -75,21 +74,23 @@ def test(net_type = "conv", data = None, shorten = False, test_acc = False):
     data["test"] = data["test"][:1000]
   
   if net_type == "conv":
-    net = Network([Layer((28, 28)), Conv((5, 5), 20, actv = "relu"),
-                   Pooling((2, 2)), Dense(100, actv = "relu", reg = 5.0),
-                   Dense(10, actv = "softmax", reg = 5.0)],
+    net = Network([Layer((28, 28)), Conv((5, 5), 20, actv = "sigmoid"),
+                   Pooling((2, 2)), Dense(100, actv = "sigmoid", reg = 0.0),
+                   Dense(10, actv = "softmax", reg = 0.0)],
                   cost = "log-likelihood")
   elif net_type == "mlp":
     net = Network([Layer((28, 28)),
-                   Dense(100, actv = "relu", reg = 0.0),
+                   Dense(100, actv = "sigmoid", reg = 0.0),
                    Dense(10, actv = "softmax", reg = 0.0)],
                   cost = "log-likelihood")
+  else:
+    raise TypeError("net_type not provided correctly")
 
   start = time()
 
   if test_acc: print ("Evaluation without training: {0}%".format(net.eval_acc(data["test"])))
   
-  net.SGD(data["train"], 60, 0.1, 10, data["validation"])
+  net.SGD(data["train"], 60, 0.4, 10, data["validation"])
 
   for i in range(10):
     pred = net.propagate(data["test"][i][0])

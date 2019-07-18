@@ -82,7 +82,7 @@ Progress for "mlp.py":
   the value of the pixels (0-255) to a sigmoidal range (0-1). The reason for the previous np.exp() overflow error was
   the failure to normalize.
 
-_______________________________________________________________________________
+______________________________________________________________________________________________________________________
 
 Progress for "conv_nn.py":
 
@@ -113,7 +113,7 @@ Progress for "conv_nn.py":
 
    Structure: Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)), Dense(10)
    Learning rate: 0.4
-   Minibatch size: 20
+   Minibatch size: 10
 
 5. 6/28/19: network still broken. ~95% accuracy achieved on MNIST after 2 epochs (which took ~1.1 hours per epoch),
    which is too low, suggesting that there is something wrong with backpropagation. Additionally, small changes to
@@ -171,6 +171,9 @@ Progress for "conv_nn.py":
    Minibatch size: 10
 
    *93.4% at epoch 26 with relu + L2 regularization of 5.0 + lr of 0.03, see structure above
+
+10. 7/17/19: (possibly) fixed network by flipping error matrix before convolution in Conv backprop. 92.4% with
+    convolutional network with same structure as 6/26/19 (60 epochs).
 
 """
 #Libraries
