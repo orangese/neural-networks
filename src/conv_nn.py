@@ -27,8 +27,7 @@ class Layer(object):
 class Conv(Layer):
   """convolutional layer with stride of 1 and no padding"""
 
-  def __init__(self, kernel_dim, num_filters, actv = "sigmoid",
-               previous_layer = None, next_layer = None):
+  def __init__(self, kernel_dim, num_filters, actv = "sigmoid", previous_layer = None, next_layer = None):
     self.kernel_dim = kernel_dim
     self.num_filters = num_filters
     self.actv = Activation(actv)
@@ -67,7 +66,7 @@ class Conv(Layer):
     self.error = Pooling.consolidate(self.error)
 
     self.nabla_b += np.sum(self.error, axis = (1, 2))[..., np.newaxis, np.newaxis]
-    self.nabla_w += self.convolve(self.previous_layer.output, np.rot90(self.error, 2), is_err = True)
+    self.nabla_w += self.convolve(self.previous_layer.output, self.error, is_err = True)
 
   def param_update(self, lr, minibatch_size):
     """weight and bias update"""
@@ -83,8 +82,10 @@ class Conv(Layer):
       if is_err: a, b = np.expand_dims(b, axis = -1), a
       return np.squeeze([convolve(b.T, a_, "valid") for a_ in a])
     else:
-      if is_err: return np.array([convolve2d(a, b_, "valid") for b_ in b])
-      else: return np.array([convolve2d(a_, b, "valid") for a_ in a])
+      if is_err: return np.array([convolve2d(a, b_, "valid") for b_ in np.rot90(b, 2)])
+      else: return np.array([convolve2d(a_, b, "valid") for a_ in np.rot90(a, 2)])
+      #scipy.signal.convolve is consistent with the mathematical definition of convolve (which differs from the
+      #usual machine learning definition of convolve), so rot180 must be applied to accomodate for the discrepancy
 
 class Pooling(Layer):
   """2-D max pooling layer"""
@@ -252,11 +253,3 @@ class Network(object):
     vector = np.zeros(self.layers[-1].dim)
     vector[num] = 1.0
     return vector
-
-if __name__ == "__main__":
-  np.seterr(all = "raise")
-  net = Network([Layer((28, 28)), Conv((5, 5), 20), Pooling((2, 2)),
-                 Conv((5, 5), 10), Pooling((2, 2)), Dense(100), Dense(10)])
-  net.propagate(np.zeros((28, 28)))
-  net.backprop(np.zeros((28,28)), np.zeros((10, 1)))
-  for layer in net.layers: print (layer.dim)
