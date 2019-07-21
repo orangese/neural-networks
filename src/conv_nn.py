@@ -61,8 +61,8 @@ class Conv(Layer):
   def backprop(self):
     """backpropagation through Conv layer, forward pass assumed"""
     self.error = self.next_layer.get_loc_fields(np.zeros(self.dim))
-    np.put_along_axis(self.error, self.next_layer.max_args, self.next_layer.error.reshape(*self.next_layer.dim, 1),
-                      axis = -1)
+    np.put_along_axis(self.error, np.expand_dims(self.next_layer.max_args, axis = -1),
+                      self.next_layer.error.reshape(*self.next_layer.dim, 1), axis = -1)
     self.error = Pooling.consolidate(self.error)
 
     self.nabla_b += np.sum(self.error, axis = (1, 2))[..., np.newaxis, np.newaxis]
@@ -106,7 +106,7 @@ class Pooling(Layer):
   def propagate(self, backprop = False):
     """propagates through Pooling layer"""
     fmaps = self.get_loc_fields(self.previous_layer.output)
-    if backprop: self.max_args = np.expand_dims(np.argmax(fmaps, axis = -1), axis = -1)
+    if backprop: self.max_args = np.argmax(fmaps, axis = -1)
     self.output = np.max(fmaps, axis = -1)
     self.dim = self.output.shape
 

@@ -14,8 +14,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 from time import time
 
-np.random.seed(12345)
-
 #Graphics
 def closest_multiples(n):
   #returns two multiples of n that are closest together
@@ -113,6 +111,6 @@ def test(net = None, net_type = "conv", data = None, shorten = False, test_acc =
 if __name__ == "__main__":
   np.seterr(all = "raise")
   data = load_data("conv")
-  # net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data, shorten = True, test_acc = True)
-  for i in range(10):
-    net = test(net_type = "conv", data = data, shorten = False, test_acc = True)
+  net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data, shorten = True, test_acc = True)
+  # for i in range(10):
+  #   net = test(net_type = "conv", data = data, shorten = False, test_acc = True)
