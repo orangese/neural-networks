@@ -8,34 +8,35 @@ Accuracy: 96.14% (25 epochs)
 
 """
 
-#Libraries
+# Libraries
 from credit_analysis.new.credit_analysis_code.credit_analysis_loader \
   import load_data, parse_inputs
 import keras
 import numpy as np
 
-#Neural network (using keras)
+# Neural network (using keras)
 def build():
-  #builds model
+  # builds model
   model = keras.Sequential([
     keras.layers.Dense(200, input_shape = (9, ), activation = "relu"),
     keras.layers.Dense(200, input_shape = (200, ), activation = "relu"),
     keras.layers.Dense(7, input_shape = (200, ), activation = "softmax")])
-    
-  model.compile(loss = "binary_crossentropy", optimizer = "adam", metrics = ["accuracy"])
+
+  optimizer = keras.optimizers.SGD(lr = 0.01, decay = 1e-8, momentum = 0.9, nesterov = True)
+  model.compile(loss = "categorical_crossentropy", optimizer = "SGD", metrics = ["categorical_accuracy"])
   
   return model
 
 def train(data, model):
-  #trains model
+  # trains model
   tr_X, tr_Y = data["train"]
   
-  model.fit(tr_X, tr_Y, epochs = 5, batch_size = 32, verbose = 2, validation_data = data["validation"])
+  model.fit(tr_X, tr_Y, epochs = 50, batch_size = 16, verbose = 2, validation_data = data["validation"])
   
   return model
 
 def evaluate(data, model):
-  #tests model
+  # tests model
   te_X, te_Y = data["test"]
 
   evaluation = model.evaluate(te_X, te_Y, verbose = 0)
@@ -44,13 +45,13 @@ def evaluate(data, model):
   return evaluation
 
 def test(model, cols, inputs_ = None):
-  #tests model on user input
-  #REQUIREMENTS: interest rate must be in decimal form (i.e., if
-  #interest rate is 30%, enter 0.3 for "int_rate") and everything
-  #must be lowercase
+  # tests model on user input
+  # REQUIREMENTS: interest rate must be in decimal form (i.e., if
+  # interest rate is 30%, enter 0.3 for "int_rate") and everything
+  # must be lowercase
   
   if inputs_ is None: inputs_ = [input(col + ": ") for col in cols]
-  #WHEN USING, SET inputs_ EQUAL TO THE INPUT FROM WEBPAGE!
+  # WHEN USING, SET inputs_ EQUAL TO THE INPUT FROM WEBPAGE!
   print (inputs_)
 
   parsed_inputs = parse_inputs(inputs_, cols)
@@ -59,7 +60,7 @@ def test(model, cols, inputs_ = None):
   
   return range_[np.argmax(model.predict(parsed_inputs))]
 
-#Testing area
+# Testing area
 if __name__ == "__main__":
   data, cols, big_data = load_data(0.6)
   print ("Independents:", list(cols))

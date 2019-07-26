@@ -8,12 +8,12 @@ neural network.
 
 """
 
-#Libraries
-import src.mlp as net #for getting the results of the digit classifier
-import matplotlib.pyplot as plt #for displaying results
-import numpy as np #for arrays
+#  Libraries
+import src.mlp as net #  for getting the results of the digit classifier
+import matplotlib.pyplot as plt #  for displaying results
+import numpy as np #  for arrays
 
-#Main
+#  Main
 structure = [784, 100, 10]
 cost_function = net.Cost("log-likelihood", regularization = "L2", reg_parameter = 5.0)
 body_activation = net.Activation("sigmoid")
@@ -26,7 +26,7 @@ monitor = True
 early_stopping = ["aGL", 0.0, 50]
 lr_variation = ["average_GL", 0.0, 10, 2, 0.002]
 write = False
-#use the above to change SGD stuff-- not in the main methods!
+#  use the above to change SGD stuff-- not in the main methods!
 
 model = net.Network(structure, cost_function = cost_function, body_activation = body_activation,
                     output_activation = output_activation, weight_init = large_weight_initialization)

@@ -7,28 +7,28 @@ A program to load and process the new credit analysis dataset.
 
 """
 
-#Libraries
+#  Libraries
 import pandas as pd
 import numpy as np
 
-#Globals
+#  Globals
 globals_ = {}
 
-#Data processing
+#  Data processing
 def sigmoid_normalize(raw_array, range_ = None):
-  #function that converts a list of values between any range to [0, 1]
+  #  function that converts a list of values between any range to [0, 1]
   array = np.copy(raw_array).astype(np.float32)
   if range_ is None: range_ = (min(array), max(array))
   if range_ == (0, 1): return array
-  #Step 1: subtract minimum from everything
+  #  Step 1: subtract minimum from everything
   array -= range_[0]
-  #Step 2: divide by range
+  #  Step 2: divide by range
   dist = abs(range_[0]) + abs(range_[1])
   array /= dist
   return np.nan_to_num(array)
 
 def convert_categorical(categoricals, range_):
-  #converts a list of categorical variables to an integer list, range = [0, 1]
+  #  converts a list of categorical variables to an integer list, range = [0, 1]
   to_int = len(range_)
   fractions = np.array([i / (to_int - 1)  for i in range(to_int)], dtype = np.float32)
   if isinstance(categoricals, str):
@@ -38,7 +38,7 @@ def convert_categorical(categoricals, range_):
                                    for categorical in categoricals], dtype = np.float32))
 
 def to_int(n):
-  #turns every element in a list into an int
+  #  turns every element in a list into an int
   if isinstance(n, list):
     fin = []
     for element in n:
@@ -50,14 +50,14 @@ def to_int(n):
     except ValueError: return 0
 
 def vectorize(value, range_):
-  #takes a value and vectorizes it (one-hot encoder)
-  #to devectorize, use np.argmax(vector)
+  #  takes a value and vectorizes it (one-hot encoder)
+  #  to devectorize, use np.argmax(vector)
   result = np.zeros((len(range_), ), dtype = np.float32)
   result[range_.index(value)] = 1.0
   return result
 
 def strip(n):
-  #strips a list of strings of everything but digits and decimals
+  #  strips a list of strings of everything but digits and decimals
   if isinstance(n, str) or isinstance(n, float) or isinstance(n, int):
     return "".join(ch for ch in str(n) if str(ch).isdigit() or str(ch) == ".")
   else:
@@ -65,7 +65,7 @@ def strip(n):
             for s in n]
 
 def get_range(data):
-  #gets the ranges for a list
+  # gets the ranges for a list
   ranges = []
   for element in data:
     if element in ranges: continue
@@ -73,12 +73,12 @@ def get_range(data):
   return ranges
 
 def unison_shuffle(a, b):
-  #returns unison shuffled copies of two np.arrays (not in-place)
+  # returns unison shuffled copies of two np.arrays (not in-place)
   p = np.random.permutation(len(a))
   return a[p], b[p]
 
 def load_file(filestream):
-  #reads a specific excel file and prepares it for data processing
+  # reads a specific excel file and prepares it for data processing
   data = pd.read_excel(filestream)
   del data["loan_status"]
   del data["funded_amnt"]
@@ -119,7 +119,7 @@ def load_file(filestream):
   return data.values.reshape(len(data.index), len(data.columns), 1), np.array(labels), data.columns
 
 def parse_inputs(inputs_, cols):
-  #parses a single set of inputs
+  # parses a single set of inputs
   parsed = []
   for input_ in inputs_:
     if cols[inputs_.index(input_)] == "term" or cols[inputs_.index(input_)] == "emp_length":
@@ -135,9 +135,8 @@ def parse_inputs(inputs_, cols):
   return np.array(parsed).reshape(1, len(cols))
 
 def load_data(ratio, keras_ = True):
-  #data processer (essentially a wrapper for "load_file()")
-  inputs, labels, cols = load_file("/Users/Ryan/PycharmProjects/neural-networks/credit_analysis/new/\
-                                   credit_analysis_dataset/credit_analysis_dataset.xlsx")
+  # data processer (essentially a wrapper for "load_file()")
+  inputs, labels, cols = load_file("/Users/Ryan/PycharmProjects/neural-networks/credit_analysis/new/credit_analysis_dataset/credit_analysis_dataset.xlsx")
   
   if not keras_:
     big_data = np.array(list(zip(inputs, labels)))
@@ -160,7 +159,7 @@ def load_data(ratio, keras_ = True):
   return data, cols, big_data
 
 def load_old(ratio, keras_ = True):
-  #loads the processed data from the previous dataset (hopefully not used!)
+  # loads the processed data from the previous dataset (hopefully not used!)
   inputs = []
   labels = []
   with open("/Users/Ryan/PycharmProjects/neural-networks/credit_analysis/original/credit_analysis_results_original/\

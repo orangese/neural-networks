@@ -58,23 +58,23 @@ in total, with 60000 being the training/validation data and 10000 being the test
 
 """
 
-#Libraries
-import matplotlib.pyplot as plt #for displaying images
-import codecs #for converting from binary to integers
-import numpy as np #parsing the files
-import gzip #for unzipping files
+# Libraries
+import matplotlib.pyplot as plt # for displaying images
+import codecs # for converting from binary to integers
+import numpy as np # parsing the files
+import gzip # for unzipping files
 
 def to_int(b):
-  #function that takes in a byte array and returns an integer
+  # function that takes in a byte array and returns an integer
   return int(codecs.encode(b, "hex"), 16)
 
 def normalize(raw_array, range_):
-  #function that converts a list of values between any range to [0, 1]
-  array = np.copy(raw_array).astype(np.float32) #raw_array is not writeable
+  # function that converts a list of values between any range to [0, 1]
+  array = np.copy(raw_array).astype(np.float32) # raw_array is not writeable
   if range_ == (0, 1): return array
-  #Step 1: subtract minimum from everything
+  # Step 1: subtract minimum from everything
   array -= range_[0]
-  #Step 2: divide by range
+  # Step 2: divide by range
   dist = abs(range_[0]) + abs(range_[1])
   array /= dist
   return array
@@ -96,41 +96,41 @@ def vectorize(num):
   return result
 
 def load_file(file, mode):
-  #function that loads a specific zipped file
+  # function that loads a specific zipped file
   
   with gzip.open(file, "rb") as raw:
     data = raw.read()
     magic_number = to_int(data[:4])
-    #the first four items in the file make up the magic number, which identifies the file as images or labels"""
+    # the first four items in the file make up the magic number, which identifies the file as images or labels"""
     length = to_int(data[4:8])
     """the next four items indicate the length of the file, so the training files have a length of 60000, and the
      testing files will have a length of 10000"""
-    if magic_number == 2049: #2049 is the magic number for labels
+    if magic_number == 2049: # 2049 is the magic number for labels
       parsed = np.frombuffer(data, dtype = np.uint8, offset = 8)
       """almost all of the work is done by the line above. In essence, the line above is converting the file from byte 
       array to a re-shaped numpy array with dimensions (60000,). (Note the difference between (60000,) and (60000, 1): 
       an array of shape (60000,) is a 1-D array of length 60000, while an array of shape (60000, 1) is a 60000-D array 
       with each dimension of length 1"""
       
-    elif magic_number == 2051: #2051 is the magic number for images
+    elif magic_number == 2051: # 2051 is the magic number for images
       num_rows = to_int(data[8:12])
-      #the 8th through 12th items in the file give the number of rows in one image
+      # the 8th through 12th items in the file give the number of rows in one image
       num_columns = to_int(data[12:16])
-      #the next four items give the number of columns in one image
+      # the next four items give the number of columns in one image
       if mode == "mlp":
         parsed = normalize(np.frombuffer(data, dtype = np.uint8, offset = 16).
                            reshape(length, num_rows * num_columns, 1), (0, 255))
       else:
         parsed = normalize(np.frombuffer(data, dtype = np.uint8, offset = 16).
                          reshape(length, num_rows, num_columns), (0, 255))
-      #converting the file from byte array to reshaped numpy array in order to prepare it for usage
+      # converting the file from byte array to reshaped numpy array in order to prepare it for usage
     else:
-      parsed = -1 #something went wrong
+      parsed = -1 # something went wrong
 
     return parsed
 
 def load_data(mode):
-  #wrapper function that implements load_file() to parse all of the MNIST files
+  # wrapper function that implements load_file() to parse all of the MNIST files
   data = {"train": [], "validation": [], "test": []}
   
   train_images = load_file("/Users/Ryan/PycharmProjects/neural-networks/mnist/mnist_dataset/train-images-idx3-ubyte.gz",
@@ -157,7 +157,7 @@ def load_data(mode):
   return data
 
 def display_image(pixels, label = None):
-  #function that displays an image using matplotlib-- not really necessary for the digit classifier
+  # function that displays an image using matplotlib-- not really necessary for the digit classifier
   figure = plt.gcf()
   figure.canvas.set_window_title("Number display")
   
@@ -167,11 +167,11 @@ def display_image(pixels, label = None):
   plt.imshow(pixels, cmap = "gray")
   plt.show()
 
-#Testing area
+# Testing area
 if __name__ == "__main__":
   data = load_data("conv")
   epoch = data["train"]
-  #np.random.shuffle(epoch) #randomly shuffle epoch
+  # np.random.shuffle(epoch) # randomly shuffle epoch
   minibatches = [epoch[i:i + 16] for i in
                         range(0, len(epoch), 16)]
   for minibatch in minibatches:

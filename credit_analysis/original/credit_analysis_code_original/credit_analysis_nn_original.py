@@ -9,13 +9,13 @@ Author: Ryan Park
 
 """
 
-#Libraries
+# Libraries
 import credit_analysis.original.credit_analysis_code_original.credit_analysis_loader_original as c
 import numpy as np
 
-#Classes
+# Classes
 class Cost(object):
-  #class for the different cost functions
+  # class for the different cost functions
 
   def __init__(self, name, regularization = None, reg_parameter = None):
     self.name = name
@@ -23,13 +23,13 @@ class Cost(object):
     self.reg_parameter = reg_parameter
 
   def derivative(self, a, y):
-    #returns ∂Cx/∂a_L
+    # returns ∂Cx/∂a_L
     if self.name == "mse": return a - y
     elif self.name == "cross-entropy": return (a - y) / (a * (1 - a))
     elif self.name == "log-likelihood": return y / a
 
   def calculate(self, pairs):
-    #accepts a list of tuples (a, y) and returns average cost over that list
+    # accepts a list of tuples (a, y) and returns average cost over that list
     if self.name == "mse": return sum(np.linalg.norm(a - y) ** 2.0 for (a, y) in pairs) / (2.0 * len(pairs))
     elif self.name == "cross-entropy":
       return sum(sum(np.nan_to_num(-y * np.log(a) - (1.0 - y) * np.log(1.0 - a) for (a, y) in pairs))) / (len(pairs))
@@ -45,7 +45,7 @@ class Activation(object):
     self.name = name
 
   def calculate(self, z):
-    if self.name == "sigmoid": return 1.0 / (1.0 + np.exp(-z)) #np.exp(z) returns e^z
+    if self.name == "sigmoid": return 1.0 / (1.0 + np.exp(-z)) # np.exp(z) returns e^z
     elif self.name == "softmax": return np.exp(z) / np.sum(np.exp(z))
 
   def derivative(self, z, j = None, i = None):
@@ -60,7 +60,7 @@ class Early_Stop(object):
   """Note that all the methods in this class need to be used in conjunction with some kind of loop-- they need to be
    supplemented with some other code"""
 
-  @staticmethod #method can be called without creating an Early_Stop object
+  @staticmethod # method can be called without creating an Early_Stop object
   def GL(accuracy, stop_parameter):
     """returns "stop" if the generalization loss exceeds a parameter. If a new accuracy maximum has been found,
     this function returns "new". Otherwise, the function returns None"""
@@ -77,7 +77,7 @@ class Early_Stop(object):
     maximum has been found, this function returns "new". Otherwise, the function returns None"""
     local_opt = max(accuracy)
     accuracy = accuracy[np.argmax(accuracy):]
-    #the above line ensures that GL is only evaluated after the locally optimal point
+    # the above line ensures that GL is only evaluated after the locally optimal point
     if len(accuracy) == 0: return "new"
     elif len(accuracy) >= n:
       average_gl = sum([local_opt - accuracy[-i - 1] for i in range(n)]) / len(accuracy)
@@ -104,7 +104,7 @@ class Network(object):
   
   def __init__(self, layers, cost_function = Cost("mse"), body_activation = Activation("sigmoid"),
                output_activation = Activation("sigmoid")):
-    self.layers = layers #"layers" is a list of neurons (ex: [3, 5, 2])
+    self.layers = layers # "layers" is a list of neurons (ex: [3, 5, 2])
     self.biases = np.array([np.random.randn(layer, 1) for layer in layers[1:]])
     """generates a random list of biases-- one array per bias (makes the indexing easier), and one array of arrays
       for each layer, except the first layer (which has no biases)."""
@@ -116,7 +116,7 @@ class Network(object):
     self.output_activation = output_activation
 
   def feed_forward(self, a):
-    #feeds an input into the network and returns its output
+    # feeds an input into the network and returns its output
     for b, w in zip(self.biases, self.weights): a = self.activation.calculate(np.dot(w, a) + b)
     a = self.output_activation.calculate(a)
     return a
@@ -134,7 +134,7 @@ class Network(object):
     
     for epoch_num in range(num_epochs):
       epoch = training_data
-      np.random.shuffle(epoch) #randomly shuffle epoch
+      np.random.shuffle(epoch) # randomly shuffle epoch
       minibatches = [epoch[i:i + minibatch_size] for i in range(0, len(epoch), minibatch_size)]
       """divide epoch into minibatches (the size of the minibatches is a hyperparameter, or a parameter not chosen by 
       the program)"""
@@ -200,14 +200,14 @@ class Network(object):
 
   def backprop(self, image, label):
     weighted_inputs = []
-    a = image #the input (i.e., the "a"s of the first layer) is the image
+    a = image # the input (i.e., the "a"s of the first layer) is the image
     activations = [a]
 
     nabla_b = np.asarray([np.zeros(b.shape) for b in self.biases])
     nabla_w = np.asarray([np.zeros(w.shape) for w in self.weights])
-    #creating the arrays to store the gradient of the cost function
+    # creating the arrays to store the gradient of the cost function
 
-    #Step 1: forward-propagating the data
+    # Step 1: forward-propagating the data
     for b, w in zip(self.biases, self.weights):
       z = np.dot(w, a) + b
       weighted_inputs.append(z)
@@ -215,36 +215,36 @@ class Network(object):
       activations.append(a)
 
     if self.output_activation.name != self.activation.name:
-      #If the output layer different from the other layers:
+      # If the output layer different from the other layers:
       activations[-1] = self.output_activation.calculate(weighted_inputs[-1])
     
-    #Step 2: computing the output error
+    # Step 2: computing the output error
     error = self.cost.get_error(self.output_activation, activations[-1], weighted_inputs[-1], label)
     nabla_b[-1] = error
     nabla_w[-1] = np.outer(error, activations[-2])
 
-    #Step 3: computing the errors for the rest of the layers
+    # Step 3: computing the errors for the rest of the layers
     l = len(self.layers) - 2
     while l > 0:
       error = np.dot(self.weights[l].T, error) * self.activation.derivative(weighted_inputs[l - 1])
-      #computing the error for layer "l + 1" (index "l")
+      # computing the error for layer "l + 1" (index "l")
       nabla_b[l - 1] = error
       nabla_w[l - 1] = np.outer(error, activations[l - 1])
       l -= 1
 
-    return nabla_b, nabla_w #returns the gradient of the cost function
+    return nabla_b, nabla_w # returns the gradient of the cost function
 
   def evaluate_accuracy(self, test_data):
-    #returns number correct when the network is evaluated using test data
+    # returns number correct when the network is evaluated using test data
     test_results = [(self.feed_forward(image), label) for (image, label) in test_data]
     return round((sum(int(np.round_(guess - 0.1) == label) for (guess, label) in test_results)
                   / len(test_data) * 100.0), 2)
 
   def evaluate_cost(self, test_data):
-    #returns cost when the network is evaluated using test data
+    # returns cost when the network is evaluated using test data
     return self.cost.calculate([(self.feed_forward(image), label) for (image, label) in test_data])
 
-#Main
+# Main
 def main(data, structure, learning_rate, minibatch_size, num_epochs, cost_function = Cost("mse"),
          body_activation = Activation("sigmoid"), output_activation = Activation("sigmoid"), monitor = False):
   network = Network(structure, cost_function = cost_function, body_activation = body_activation,
@@ -269,44 +269,44 @@ def main(data, structure, learning_rate, minibatch_size, num_epochs, cost_functi
 
   return network
 
-#Testing area
+# Testing area
 def main2(data):
   network = main(data, [15, 20, 20, 1], 2.50, 50, 10, cost_function = Cost("cross-entropy", regularization = "L2",
                                                                            reg_parameter = 0.5), monitor = False)
-  #data = credit_analysis_loader.load_data()
+  # data = credit_analysis_loader.load_data()
   print ("Validation accuracy: " + str(network.evaluate_accuracy(data["train"])) + "%")
-  #Below are the final weights and biases
-##  network.biases = np.array([[[83.41199168]]])
-##  network.weights = np.array([[[41.51300759,  -13.28574762,   23.72629901,
-##                                -5.71168951, -10.2075779, 27.31207391,
-##                                -67.58494164 , 137.76930164, -233.67085598,
-##                                4.55101101,  85.08417989,   52.34560646,
-##                                -15.42126096,  -89.86721409,  153.21697032]]])
-##  #Interestingly enough, the above line works-- the structure is not immutable.
-##  print (network.evaluate_accuracy(data["train"]))
+  # Below are the final weights and biases
+  # network.biases = np.array([[[83.41199168]]])
+  # network.weights = np.array([[[41.51300759,  -13.28574762,   23.72629901,
+  #                               -5.71168951, -10.2075779, 27.31207391,
+  #                               -67.58494164 , 137.76930164, -233.67085598,
+  #                               4.55101101,  85.08417989,   52.34560646,
+  #                               -15.42126096,  -89.86721409,  153.21697032]]])
+  # # Interestingly enough, the above line works-- the structure is not immutable.
+  # print (network.evaluate_accuracy(data["train"]))
   return network
   
 
 if __name__ == "__main__":
   data = c.load_data()
-##  import mlp as mlp
-##  structure = [15, 20, 20, 1]
-##  learning_rate = 2.0
-##  minibatch_size = 10
-##  num_epochs = 10
-##  cost = mlp.Cost("cross-entropy", regularization = "L2", reg_parameter = 5.0)
-##  output_activation = mlp.Activation("sigmoid")
-##  large_weight_initialization = False
-##  write = None
-##  lr_variation = ["average_improvement", 0.1, 10, 2, 0.002]
-##  early_stopping = None
-##  
-##  net, n = mlp.main(data, structure, learning_rate, minibatch_size, num_epochs,
-##           cost_function = cost,output_activation = output_activation,
-##           large_weight_initialization = large_weight_initialization,
-##           early_stopping = early_stopping, lr_variation = lr_variation,
-##           monitor = False, show = True, write = write)
-##  print (net.feed_forward(data["test"][0][0]), data["train"][0][1])
-##  print (net.feed_forward(data["validation"][0][0]), data["validation"][0][1])
-##  print (net.evaluate_accuracy(data["validation"]))
-##  
+  # import mlp as mlp
+  # structure = [15, 20, 20, 1]
+  # learning_rate = 2.0
+  # minibatch_size = 10
+  # num_epochs = 10
+  # cost = mlp.Cost("cross-entropy", regularization = "L2", reg_parameter = 5.0)
+  # output_activation = mlp.Activation("sigmoid")
+  # large_weight_initialization = False
+  # write = None
+  # lr_variation = ["average_improvement", 0.1, 10, 2, 0.002]
+  # early_stopping = None
+  #
+  # net, n = mlp.main(data, structure, learning_rate, minibatch_size, num_epochs,
+  #          cost_function = cost,output_activation = output_activation,
+  #          large_weight_initialization = large_weight_initialization,
+  #          early_stopping = early_stopping, lr_variation = lr_variation,
+  #          monitor = False, show = True, write = write)
+  # print (net.feed_forward(data["test"][0][0]), data["train"][0][1])
+  # print (net.feed_forward(data["validation"][0][0]), data["validation"][0][1])
+  # print (net.evaluate_accuracy(data["validation"]))
+  #
