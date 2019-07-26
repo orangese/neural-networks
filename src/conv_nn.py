@@ -9,23 +9,23 @@ are organized into their own classes.
 
 """
 
-#Imports
+# Imports
 import numpy as np
-from scipy.signal import convolve, convolve2d
+from scipy.signal import convolve2d
 from functools import reduce
 from src.mlp import Activation, Cost
 
-#Classes
+# Classes
 class Layer(object):
   """provides appropriate abstraction and acts as an input layer"""
 
   def __init__(self, dim):
     self.dim = dim
     self.output = np.zeros(self.dim)
-    #dim refers to the dimensions of the output of this layer
+    # dim refers to the dimensions of the output of this layer
 
 class Conv(Layer):
-  """convolutional layer with stride of 1 and no padding"""
+  """2-D convolutional layer with stride of 1 and no padding"""
 
   def __init__(self, kernel_dim, num_filters, actv = "sigmoid", previous_layer = None, next_layer = None):
     self.kernel_dim = kernel_dim
@@ -38,13 +38,10 @@ class Conv(Layer):
 
   def param_init(self):
     """initializes weights, biases, and gradients"""
-    self.num_fmaps = self.previous_layer.dim[0] if len(self.previous_layer.dim) == 3 else 1
-    
     self.biases = np.random.normal(size = (self.num_filters, 1, 1))
     scale = np.sqrt(1.0 / (self.num_filters * np.prod(self.kernel_dim) / np.prod(self.next_layer.pool_dim)))
-    size = [self.num_filters, *self.kernel_dim]
-    if self.num_fmaps != 1: size.append(self.num_fmaps)
-    self.weights = np.random.normal(loc = 0, scale = scale, size = size)
+    # weight init is improved by squashing standard deviation using 1 / sqrt(n_in)
+    self.weights = np.random.normal(scale = scale, size = (self.num_filters, *self.kernel_dim))
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
@@ -53,7 +50,7 @@ class Conv(Layer):
     """propagates through Conv layer, param_init not assumed"""
     try: self.biases
     except AttributeError: self.param_init()
-    zs = self.convolve(self.weights, self.previous_layer.output) + self.biases
+    zs = Conv.convolve(self.weights, self.previous_layer.output) + self.biases
     self.output = self.actv.calculate(zs)
     self.dim = self.output.shape
     if backprop: self.zs = zs
@@ -63,10 +60,11 @@ class Conv(Layer):
     self.error = self.next_layer.get_loc_fields(np.zeros(self.dim))
     np.put_along_axis(self.error, np.expand_dims(self.next_layer.max_args, axis = -1),
                       self.next_layer.error.reshape(*self.next_layer.dim, 1), axis = -1)
-    self.error = Pooling.consolidate(self.error)
+    # routes gradient such that only max activation neurons get nonzero gradient
+    self.error = Pooling.consolidate(self.error) * self.actv.derivative(self.zs)
 
-    self.nabla_b += np.sum(self.error, axis = (1, 2))[..., np.newaxis, np.newaxis]
-    self.nabla_w += self.convolve(self.previous_layer.output, self.error, is_err = True)
+    self.nabla_b += np.sum(self.error, axis = (1, 2)).reshape(self.nabla_b.shape)
+    self.nabla_w += Conv.convolve(self.previous_layer.output, self.error, is_err = True)
 
   def param_update(self, lr, minibatch_size):
     """weight and bias update"""
@@ -76,16 +74,13 @@ class Conv(Layer):
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
-  def convolve(self, a, b, is_err = False):
+  @staticmethod
+  def convolve(a, b, is_err = False):
     """convolves a_ with b_, order of convolution depends on err"""
-    if self.num_fmaps != 1:
-      if is_err: a, b = np.expand_dims(b, axis = -1), a
-      return np.squeeze([convolve(b.T, a_, "valid") for a_ in a])
-    else:
-      if is_err: return np.array([convolve2d(a, b_, "valid") for b_ in np.rot90(b, 2)])
-      else: return np.array([convolve2d(a_, b, "valid") for a_ in np.rot90(a, 2)])
-      #scipy.signal.convolve is consistent with the mathematical definition of convolve (which differs from the
-      #usual machine learning definition of convolve), so rot180 must be applied to accomodate for the discrepancy
+    if is_err: return np.array([convolve2d(a, np.rot90(b_, 2), mode = "valid") for b_ in b])
+    else: return np.array([convolve2d(np.rot90(a_, 2), b, mode = "valid") for a_ in a])
+    # scipy.signal.convolve is consistent with the mathematical definition of convolve (which differs from the
+    # usual machine learning definition of convolve), so rot180 must be applied to accomodate for the discrepancy
 
 class Pooling(Layer):
   """2-D max pooling layer"""
@@ -102,6 +97,7 @@ class Pooling(Layer):
     loc_fields = a.reshape(a.shape[0], int(a.shape[1] / self.pool_dim[0]), self.pool_dim[0],
                            int(a.shape[2] / self.pool_dim[1]), self.pool_dim[1]).transpose(0, 1, 3, 2, 4)
     return loc_fields.reshape(*loc_fields.shape[:3], -1)
+    # example: divides input with shape (20, 24, 24) into array with shape (20, 12, 12, 4)
 
   def propagate(self, backprop = False):
     """propagates through Pooling layer"""
@@ -113,14 +109,15 @@ class Pooling(Layer):
   def backprop(self):
     """backpropagation through Pooling layer, forward pass assumed"""
     self.error = np.dot(self.next_layer.weights.T, self.next_layer.error)
-    #activation of pooling layer is linear w.r.t. to the max activations in
-    #the local pool, so the derivative of the activation function is 1
+    # activation of pooling layer is linear w.r.t. to the max activations in
+    # the local pool, so the derivative of the activation function is 1
 
   @staticmethod
   def consolidate(a_):
     """consolidates local fields into convolutional output"""
     a = a_.reshape(*a_.shape[:3], int(a_.shape[3] / 2), int(a_.shape[3] / 2)).transpose(0, 1, 3, 2, 4)
     return a.reshape(a.shape[0], a.shape[1] * a.shape[2], a.shape[3] * a.shape[4])
+    # example: consolidates input with shape (20, 12, 12, 4) into array with shape (20, 24, 24)
 
 class Dense(Layer):
   """basic dense layer with multiple activation and cost functions"""
@@ -140,8 +137,9 @@ class Dense(Layer):
     self.biases = np.random.normal(size = (self.num_neurons, 1))
     self.weights = np.random.normal(scale = np.sqrt(1.0 / self.num_neurons),
                                     size = (self.num_neurons, reduce(lambda a, b : a * b, self.previous_layer.dim)))
-    
+
     if self.actv.name == "softmax":
+      # weight init for softmax follows the book "Neural Networks and Deep Learning"
       self.biases = np.zeros(self.biases.shape)
       self.weights = np.zeros(self.weights.shape)
 
@@ -170,6 +168,7 @@ class Dense(Layer):
     """weight and bias update, backprop assumed"""
     self.biases -= (lr / minibatch_size) * self.nabla_b
     self.weights = (1.0 - lr * self.reg / epoch_len) * self.weights - (lr / minibatch_size) * self.nabla_w
+    # update rule includes built-in L2 regularization
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
@@ -179,11 +178,11 @@ class Network(object):
 
   def __init__(self, layers = [], cost = "cross-entropy"):
     self.layers = tuple(layers)
-    #self.layers is a tuple to prevent manual addition of layers
+    # self.layers is a tuple to prevent manual addition of layers
     assert len(self.layers) == 0 or isinstance(self.layers[0], Layer), "network layers must start with Layer object"
     for previous_layer, layer in zip(self.layers, self.layers[1:]): layer.previous_layer = previous_layer
     for next_layer, layer in zip(self.layers[1:], self.layers): layer.next_layer = next_layer
-    #above loop link all the layers together
+    # above loops link all the layers together
     self.cost = Cost(cost)
     if len(self.layers) != 0: self.layers[-1].cost = self.cost
 
@@ -193,9 +192,8 @@ class Network(object):
     if not position: position = len(self.layers)
     new_layers.insert(position, layer)
     self.__init__(new_layers)
-    #it seems inefficient and un-pythonic to rewrite self.layers each time
-    #you want to add a new layer, but it seems to be the best way in order
-    #to prevent manual addition of layers
+    # it seems inefficient and un-pythonic to rewrite self.layers each time you want to add a new layer,
+    # but it seems to be the best way in order to prevent manual addition of layers
 
   def rm_layer(self, position = None, layer = None):
     """removes a layer and re-links it"""
@@ -245,8 +243,8 @@ class Network(object):
 
   def eval_cost(self, test_data):
     """returns cost when the network is evaluated using test data"""
-    return round((self.cost.calculate([(self.propagate(img), self.vectorize(label))
-                                       for (img, label) in test_data])).item(), 5)
+    return round(self.cost.calculate([(self.propagate(img), self.vectorize(label))
+                                      for (img, label) in test_data]).item(), 5)
 
   def vectorize(self, num):
     """function that vectorizes a scalar (one-hot encoding)"""
