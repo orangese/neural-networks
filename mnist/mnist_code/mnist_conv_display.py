@@ -78,7 +78,7 @@ def test(net = None, net_type = "conv", data = None, shorten = False, test_acc =
     data["test"] = data["test"][:1000]
   
   if net_type == "conv":
-    net = Network([Layer((28, 28)), Conv((5, 5), 3, actv = "sigmoid"),
+    net = Network([Layer((28, 28)), Conv((5, 5), 20, actv = "sigmoid"),
                    Pooling((2, 2)), Dense(100, actv = "sigmoid", reg = 0.0),
                    Dense(10, actv = "softmax", reg = 0.0)],
                   cost = "log-likelihood")
@@ -96,7 +96,7 @@ def test(net = None, net_type = "conv", data = None, shorten = False, test_acc =
 
   if test_acc: print ("Evaluation without training: {0}%".format(net.eval_acc(data["test"])))
   
-  net.SGD(data["train"], 60, 0.5, 10, data["validation"])
+  net.SGD(data["train"], 60, 0.1, 10, data["validation"])
 
   if test_acc:
     for i in range(10):
@@ -115,6 +115,6 @@ def test(net = None, net_type = "conv", data = None, shorten = False, test_acc =
 if __name__ == "__main__":
   np.seterr(all = "raise")
   data = load_data("conv")
-  net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data, shorten = False, test_acc = False)
-  #  for i in range(10):
-  #    net = test(net_type = "conv", data = data, shorten = False, test_acc = True)
+  # net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data, shorten = False, test_acc = True)
+  for i in range(10):
+    net = test(net_type = "conv", data = data, shorten = False, test_acc = True)

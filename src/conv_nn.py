@@ -120,7 +120,7 @@ class Pooling(Layer):
     # example: consolidates input with shape (20, 12, 12, 4) into array with shape (20, 24, 24)
 
 class Dense(Layer):
-  """basic dense layer with multiple activation and cost functions"""
+  """dense (MLP) layer with multiple activation and cost functions"""
 
   def __init__(self, num_neurons, actv = "sigmoid", reg = 0.0,
                previous_layer = None, next_layer = None):
@@ -176,7 +176,8 @@ class Dense(Layer):
 class Network(object):
   """uses Layer classes to create a functional network"""
 
-  def __init__(self, layers = [], cost = "cross-entropy"):
+  def __init__(self, layers = None, cost = "cross-entropy"):
+    if layers is None: layers = []
     self.layers = tuple(layers)
     # self.layers is a tuple to prevent manual addition of layers
     assert len(self.layers) == 0 or isinstance(self.layers[0], Layer), "network layers must start with Layer object"
@@ -209,9 +210,9 @@ class Network(object):
     for layer in self.layers[1:]: layer.propagate(backprop = backprop)
     return self.layers[-1].output
 
-  def backprop(self, img, label):
+  def backprop(self, example, label):
     """backprop through network by piecing together Layer backprop functions"""
-    self.propagate(img, backprop = True)
+    self.propagate(example, backprop = True)
     self.layers[-1].backprop(label)
     for layer in reversed(self.layers[1:len(self.layers) - 1]): layer.backprop()
 
@@ -229,25 +230,24 @@ class Network(object):
       np.random.shuffle(epoch)
       minibatches = [epoch[i:i + minibatch_size] for i in range(0, len(epoch), minibatch_size)]
       for minibatch in minibatches:
-        for image, label in minibatch:
-          self.backprop(image, label)
+        for example, label in minibatch:
+          self.backprop(example, label)
         self.param_update(lr, minibatch_size, len(epoch))
       if not (val_data is None):
-        print ("Epoch {0}: accuracy: {1}% - cost: {2}".format(epoch_num + 1, self.eval_acc(val_data),
-                                                              self.eval_cost(val_data)))
+        print ("Epoch {0}: accuracy: {1}% - cost: {2}".format(
+          epoch_num + 1, self.eval_acc(val_data), self.eval_cost(val_data)))
 
-  def eval_acc(self, test_data):
-    """returns percent correct when the network is evaluated using test data"""
-    test_results = [(np.argmax(self.propagate(img)), label) for (img, label) in test_data]
-    return round(sum(int(img == label) for (img, label) in test_results) / len(test_data) * 100.0, 2)
+  def eval_acc(self, data):
+    """returns percent correct when the network is evaluated on parameter data"""
+    results = [(np.argmax(self.propagate(x)), y) for (x, y) in data]
+    return round(sum(int(x == y) for (x, y) in results) / len(data) * 100.0, 2)
 
-  def eval_cost(self, test_data):
-    """returns cost when the network is evaluated using test data"""
-    return round(self.cost.calculate([(self.propagate(img), self.vectorize(label))
-                                      for (img, label) in test_data]).item(), 5)
+  def eval_cost(self, data):
+    """returns cost when the network is evaluated on parameter data"""
+    return round(self.cost.calculate([(self.propagate(x), self.one_hot_encoding(y)) for (x, y) in data]).item(), 5)
 
-  def vectorize(self, num):
+  def one_hot_encoding(self, scalar):
     """function that vectorizes a scalar (one-hot encoding)"""
-    vector = np.zeros(self.layers[-1].dim)
-    vector[num] = 1.0
-    return vector
+    encoding = np.zeros(self.layers[-1].dim)
+    encoding[scalar] = 1.0
+    return encoding
