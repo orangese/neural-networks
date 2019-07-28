@@ -165,4 +165,12 @@ Progress for "conv_nn.py":
     Also identified gradient instability problem: gradients explode when backpropagated. Interestingly, the more
     minibatches run, the greater the magnitude of this problem. Errors encountered include "underflow in multiply",
     "underflow in true_divide", and "underflow in exp" in sigmoid calculations and nabla_w calculations. Possible fix
-    to this issue: multiply error in convolutional layer by derivative of convolution activation function.
+    to this issue: multiply error in convolutional layer by derivative of convolution activation function. As a result,
+    the convolutional network performed as expected: with the structure described below (which mirrors the first
+    convolutional net in "Neural Networks and Deep Learning"), a peak of 98.86% validation accuracy (epoch 45)
+    and 98.84% test accuracy is achieved (after 60 epochs). These results were similar to those reported in
+    "Neural Networks and Deep Learning", indicating that the network is (finally!) performing as expected.
+
+    Structure: Layer((28, 28)), Conv((5, 5), 20), Dense(100), Dense(10, actv = "softmax")
+    Learning rate: 0.1
+    Minibatch size: 10
