@@ -153,7 +153,8 @@ Progress for "conv_nn.py":
    Learning rate: 0.1
    Minibatch size: 10
 
-   *93.4% at epoch 26 with relu + L2 regularization of 5.0 + lr of 0.03, see structure above
+   Additionally, a peak of 93.4% at epoch 26 was achieved using relu in all layer except for the output layer (softmax),
+   L2 regularization with lambda = 5.0, a learning rate of 0.03, and the structure above.
 
 10. 7/17/19: (possibly) fixed network by flipping error matrix before convolution in Conv backprop. 92.4% with
     convolutional network with same structure as 6/26/19 (60 epochs).
