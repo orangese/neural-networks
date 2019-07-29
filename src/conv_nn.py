@@ -122,8 +122,7 @@ class Pooling(Layer):
 class Dense(Layer):
   """dense (MLP) layer with multiple activation and cost functions"""
 
-  def __init__(self, num_neurons, actv = "sigmoid", reg = 0.0,
-               previous_layer = None, next_layer = None):
+  def __init__(self, num_neurons, actv = "sigmoid", reg = 0.0, previous_layer = None, next_layer = None):
     self.num_neurons = num_neurons
     self.actv = Activation(actv)
     self.reg = reg
@@ -156,10 +155,8 @@ class Dense(Layer):
 
   def backprop(self, label = None):
     """backpropagation for Dense layer, forward pass assumed"""
-    try:
-      self.error = self.cost.get_error(self.actv, self.output, self.zs, label)
-    except AttributeError:
-      self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * self.actv.derivative(self.zs)
+    if self.next_layer is None: self.error = self.cost.get_error(self.actv, self.output, self.zs, label)
+    else: self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * self.actv.derivative(self.zs)
 
     self.nabla_b += self.error
     self.nabla_w += np.outer(self.error, self.previous_layer.output)
