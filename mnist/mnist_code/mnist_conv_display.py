@@ -78,8 +78,10 @@ def test(net = None, net_type = "conv", data = None, shorten = False, test_acc =
     data["test"] = data["test"][:1000]
   
   if net_type == "conv":
-    net = Network([Layer((28, 28)), Conv((5, 5), 20, actv = "sigmoid"),
-                   Pooling((2, 2)), Dense(100, actv = "sigmoid", reg = 0.0),
+    net = Network([Layer((28, 28)),
+                   Conv((5, 5), 20, actv = "relu"),
+                   Pooling((2, 2)),
+                   Dense(100, actv = "relu", reg = 0.0),
                    Dense(10, actv = "softmax", reg = 0.0)],
                   cost = "log-likelihood")
   elif net_type == "mlp":
@@ -115,6 +117,6 @@ def test(net = None, net_type = "conv", data = None, shorten = False, test_acc =
 if __name__ == "__main__":
   np.seterr(all = "raise")
   data = load_data("conv")
-  # net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data, shorten = False, test_acc = True)
-  for i in range(10):
-    net = test(net_type = "conv", data = data, shorten = False, test_acc = True)
+  net = test(net_type = input("MLP or ConvNN test? (mlp/conv): "), data = data, shorten = False, test_acc = False)
+  # for i in range(10):
+  #   net = test(net_type = "conv", data = data, shorten = False, test_acc = True)
