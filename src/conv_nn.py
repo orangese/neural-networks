@@ -234,6 +234,7 @@ class Network(object):
   def SGD(self, train_data, num_epochs, lr, minibatch_size, val_data = None):
     """stochastic gradient descent through network with L2 regularization"""
     for epoch_num in range(num_epochs):
+      start = time()
       epoch = train_data
       np.random.shuffle(epoch)
       minibatches = [epoch[i:i + minibatch_size] for i in range(0, len(epoch), minibatch_size)]
@@ -241,8 +242,8 @@ class Network(object):
         for example, label in minibatch: self.backprop(example, label)
         self.param_update(lr, minibatch_size, len(epoch))
       if not (val_data is None):
-        print ("Epoch {0}: accuracy: {1}% - cost: {2}".format(
-          epoch_num + 1, self.eval_acc(val_data), self.eval_cost(val_data)))
+        print ("Epoch {0}: accuracy: {1}% - cost: {2} - time: {3}s".format(
+          epoch_num + 1, self.eval_acc(val_data), self.eval_cost(val_data), round(time() - start)))
 
   def eval_acc(self, data):
     """returns percent correct when the network is evaluated on parameter data"""
