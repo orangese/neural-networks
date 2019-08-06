@@ -14,6 +14,7 @@ import numpy as np
 from scipy.signal import convolve2d
 from functools import reduce
 from src.mlp import Activation, Cost
+from time import time
 
 # Classes
 class Layer(object):
@@ -137,6 +138,7 @@ class Dense(Layer):
     self.biases = np.random.normal(size = (self.num_neurons, 1))
     self.weights = np.random.normal(scale = np.sqrt(1.0 / self.num_neurons),
                                     size = (self.num_neurons, reduce(lambda a, b : a * b, self.previous_layer.dim)))
+    # weight init flattens previous layer dimensions for easier computations
 
     if self.actv.name == "softmax":
       # weight init for softmax follows the book "Neural Networks and Deep Learning"
@@ -153,15 +155,14 @@ class Dense(Layer):
     try: self.biases
     except AttributeError: self.param_init()
     zs = np.dot(self.weights, self.previous_layer.output.reshape(-1, 1)) + self.biases
-    if self.dropout != 1.0 and not backprop: zs *= self.dropout_mask
     self.output = self.actv.calculate(zs)
+    if self.dropout != 1.0 and backprop: self.output *= self.dropout_mask
     if backprop: self.zs = zs
 
   def backprop(self, label = None):
     """backpropagation for Dense layer, forward pass assumed"""
     if self.next_layer is None: self.error = self.cost.get_error(self.actv, self.output, self.zs, label)
     else: self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * self.actv.derivative(self.zs)
-
     if self.dropout != 1.0: self.error *= self.dropout_mask
 
     self.nabla_b += self.error
