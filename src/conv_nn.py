@@ -122,10 +122,11 @@ class Pooling(Layer):
 class Dense(Layer):
   """dense (MLP) layer with multiple activation and cost functions"""
 
-  def __init__(self, num_neurons, actv = "sigmoid", reg = 0.0, previous_layer = None, next_layer = None):
+  def __init__(self, num_neurons, actv = "sigmoid", reg = 0.0, dropout = 1.0, previous_layer = None, next_layer = None):
     self.num_neurons = num_neurons
     self.actv = Activation(actv)
     self.reg = reg
+    self.dropout = dropout
 
     self.previous_layer = previous_layer
     self.next_layer = next_layer
@@ -145,11 +146,14 @@ class Dense(Layer):
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
 
+    self.dropout_mask = self.get_dropout_mask()
+
   def propagate(self, backprop = False):
     """propagates through Dense layer, param init not assumed"""
     try: self.biases
     except AttributeError: self.param_init()
     zs = np.dot(self.weights, self.previous_layer.output.reshape(-1, 1)) + self.biases
+    if self.dropout != 1.0 and not backprop: zs *= self.dropout_mask
     self.output = self.actv.calculate(zs)
     if backprop: self.zs = zs
 
@@ -157,6 +161,8 @@ class Dense(Layer):
     """backpropagation for Dense layer, forward pass assumed"""
     if self.next_layer is None: self.error = self.cost.get_error(self.actv, self.output, self.zs, label)
     else: self.error = np.dot(self.next_layer.weights.T, self.next_layer.error) * self.actv.derivative(self.zs)
+
+    if self.dropout != 1.0: self.error *= self.dropout_mask
 
     self.nabla_b += self.error
     self.nabla_w += np.outer(self.error, self.previous_layer.output)
@@ -169,6 +175,11 @@ class Dense(Layer):
 
     self.nabla_b = np.zeros(self.biases.shape)
     self.nabla_w = np.zeros(self.weights.shape)
+
+    self.dropout_mask = self.get_dropout_mask()
+
+  def get_dropout_mask(self):
+    return np.random.binomial(1, self.dropout, size = self.dim) / self.dropout
 
 class Network(object):
   """uses Layer classes to create a functional network"""
@@ -227,8 +238,7 @@ class Network(object):
       np.random.shuffle(epoch)
       minibatches = [epoch[i:i + minibatch_size] for i in range(0, len(epoch), minibatch_size)]
       for minibatch in minibatches:
-        for example, label in minibatch:
-          self.backprop(example, label)
+        for example, label in minibatch: self.backprop(example, label)
         self.param_update(lr, minibatch_size, len(epoch))
       if not (val_data is None):
         print ("Epoch {0}: accuracy: {1}% - cost: {2}".format(

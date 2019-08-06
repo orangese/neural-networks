@@ -86,7 +86,7 @@ def test(net = None, net_type = "conv", data = None, shorten = False, test_acc =
                   cost = "log-likelihood")
   elif net_type == "mlp":
     net = Network([Layer((28, 28)),
-                   Dense(100, actv = "sigmoid", reg = 0.0),
+                   Dense(100, actv = "sigmoid", reg = 0.0, dropout = 0.5),
                    Dense(10, actv = "softmax", reg = 0.0)],
                   cost = "log-likelihood")
   elif net:
