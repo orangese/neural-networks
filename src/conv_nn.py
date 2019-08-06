@@ -242,8 +242,8 @@ class Network(object):
         for example, label in minibatch: self.backprop(example, label)
         self.param_update(lr, minibatch_size, len(epoch))
       if not (val_data is None):
-        print ("Epoch {0}: accuracy: {1}% - cost: {2} - time: {3}s".format(
-          epoch_num + 1, self.eval_acc(val_data), self.eval_cost(val_data), round(time() - start)))
+        print ("Epoch {0} of {1}: val_accuracy: {2}% - val_cost: {3} - time: {4}s".format(
+          epoch_num + 1, num_epochs, self.eval_acc(val_data), self.eval_cost(val_data), round(time() - start)))
 
   def eval_acc(self, data):
     """returns percent correct when the network is evaluated on parameter data"""
