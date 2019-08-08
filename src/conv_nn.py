@@ -26,7 +26,7 @@ class Layer(object):
     # dim refers to the dimensions of the output of this layer
 
 class Conv(Layer):
-  """2-D convolutional layer with stride of 1 and no padding"""
+  """3-D convolutional layer with stride of 1 and no padding"""
 
   def __init__(self, kernel_dim, num_filters, actv = "sigmoid", previous_layer = None, next_layer = None):
     self.kernel_dim = kernel_dim
