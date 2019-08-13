@@ -220,7 +220,7 @@ class Network(object):
       if dropout:
         for layer in dropout[0]: self.weights[layer + 1] *= dropout[1][dropout[0].index(layer)]
 
-    if not (test_data is None): print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
+    if test_data is not None: print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
       
     if monitor or early_stopping: return evaluation
 
@@ -362,7 +362,7 @@ class Network(object):
       if dropout:
         for layer in dropout[0]: self.weights[layer + 1] *= dropout[1][dropout[0].index(layer)]
 
-    if not (test_data is None): print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
+    if test_data is not None: print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
       
     if monitor or early_stopping: return evaluation
 

@@ -194,7 +194,7 @@ class Network(object):
           stored_biases = self.biases
           stored_weights = self.weights 
 
-    if not (test_data is None): print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
+    if test_data is not None: print ("Test accuracy: {0}%".format(self.evaluate_accuracy(test_data)))
 
     if monitor or early_stopping != None: return evaluation
 
