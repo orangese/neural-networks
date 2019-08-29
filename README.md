@@ -27,17 +27,3 @@ MLPs and ConvNNs applied to the classic "Hello World" of machine learning proble
 #### AI Credit (`credit-analysis`):
 
 Part of a joint effort to create a credit analysis tool trained on Lending Club's dataset. `original` created during HackMHS VI and `new` created for submission to a Blockstack program.
-
-## Download instructions
-
-These are the download instructions for MacOS as of July 2019. They assume that the user has downloaded Python and that the user has administrative access on his/her computer. For Python installation, go to https://www.python.org/downloads/.
-
-### Libraries
-
-In order to use the code in this repository, run the following command in terminal: `pip3 install pandas matplotlib numpy scipy tensorflow keras`. (For Python2 users, replace `pip3` with `pip`.) Depending on whether you have installed command line tools, you might get a prompt to install `gcc` via Apple's `xcode`.
-
-If you do not have `pip` installed, you will get the following error: `-bash: pip: command not found`. Refer to https://pip.pypa.io/en/stable/installing/ for a `pip` installation guide.
-
-### Cloning this repository
-
-In order to clone this repository, run the command: `git clone https://github.com/orangese/neural-networks.git <target_directory>`. In order to use the code in this repository, you have to change the directory paths in the code (e.g., references to other programs and datasets).
