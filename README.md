@@ -23,7 +23,3 @@ Application of neural networks to various problems.
 #### MNIST (`mnist`):
 
 MLPs and ConvNNs applied to the classic "Hello World" of machine learning problems: digit recognition with the MNIST dataset.
-
-#### AI Credit (`credit-analysis`):
-
-Part of a joint effort to create a credit analysis tool trained on Lending Club's dataset. `original` created during HackMHS VI and `new` created for submission to a Blockstack program.
