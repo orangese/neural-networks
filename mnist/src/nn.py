@@ -1,6 +1,6 @@
 """
 
-"mnist_nn.py"
+"nn.py"
 
 Implementation of digit classifying neural networks: an MLP and a convolutional network. All were written using numpy
 and scipy-- no traditional machine learning languages were used (scikit-learn, TensorFlow, keras, PyTorch, etc.).
@@ -24,12 +24,12 @@ Accuracy (CNN): []
 """
 
 # Libraries
-from mnist.mnist_code.mnist_loader import load_data
+from mnist.src.data_loader import load_data
 
 import sys
 sys.path.insert(0, "/Users/ryan/Documents/Coding/neural-networks/src")
 import src.mlp as mlp # vanilla feed-forward neural network
-from mnist.mnist_code.mnist_conv_display import test # convolutional neural network + MLP network
+from mnist.src.conv_display import test # convolutional neural network + MLP network
 
 # Testing area
 if __name__ == "__main__":

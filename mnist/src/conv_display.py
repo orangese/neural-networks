@@ -1,15 +1,15 @@
 
 """
 
-"mnist_conv_display.py"
+"conv_display.py"
 
-A program to display the results of a trained ConvNN.
+A program to display the src of a trained ConvNN.
 
 """
 
 # Libraries
 from src.conv_nn import Network, Layer, Conv, Pooling, Dense
-from mnist.mnist_code.mnist_loader import load_data
+from mnist.src.data_loader import load_data
 import matplotlib.pyplot as plt
 import numpy as np
 from time import time

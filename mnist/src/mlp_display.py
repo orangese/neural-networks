@@ -1,16 +1,16 @@
 
 """
 
-"mnist_display.py"
+"mlp_display.py"
 
-A program to plot the progress and results of the digit classifying
+A program to plot the progress and src of the digit classifying
 neural network.
 
 """
 
 #  Libraries
-import src.mlp as net #  for getting the results of the digit classifier
-import matplotlib.pyplot as plt #  for displaying results
+import src.mlp as net #  for getting the src of the digit classifier
+import matplotlib.pyplot as plt #  for displaying src
 import numpy as np #  for arrays
 
 #  Main
